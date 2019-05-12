@@ -54,7 +54,6 @@ public class ForceVacCommand extends Command {
 
                 if (mapItem.getMeso() > 0) {
                     player.gainMeso(mapItem.getMeso(), true);
-                } else if (player.applyConsumeOnPickup(mapItem.getItemId())) {    // thanks Vcoc for pointing out consumables on pickup not being processed here
                 } else if (mapItem.getItemId() == 4031865 || mapItem.getItemId() == 4031866) {
                     // Add NX to account, show effect and make item disappear
                     player.getCashShop().gainCash(1, mapItem.getItemId() == 4031865 ? 100 : 250);
@@ -64,10 +63,8 @@ public class ForceVacCommand extends Command {
                         continue;
                     }
                     MapleInventoryManipulator.addById(c, mapItem.getItem().getItemId(), mapItem.getItem().getQuantity(), null, petId);
-                } else if (MapleInventoryManipulator.addFromDrop(c, mapItem.getItem(), true)) {
-                    if (mapItem.getItemId() == 4031868) {
-                        player.updateAriantScore();
-                    }
+                } else {
+                    MapleInventoryManipulator.addFromDrop(c, mapItem.getItem(), true);
                 }
 
                 player.getMap().pickItemDrop(MaplePacketCreator.removeItemFromMap(mapItem.getObjectId(), 2, player.getId()), mapItem);

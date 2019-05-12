@@ -32,14 +32,12 @@ import net.server.audit.locks.MonitoredLockType;
 import net.server.audit.locks.MonitoredReentrantReadWriteLock;
 import net.server.audit.locks.factory.MonitoredReentrantLockFactory;
 import server.maps.AbstractAnimatedMapleMapObject;
-import server.maps.MapleMap;
 
 /**
  *
  * @author RonanLana
  */
 public abstract class AbstractMapleCharacterObject extends AbstractAnimatedMapleMapObject {
-    protected MapleMap map;
     protected int str, dex, luk, int_, hp, maxhp, mp, maxmp;
     protected int hpMpApUsed, remainingAp;
     protected int[] remainingSp = new int[10];
@@ -65,14 +63,6 @@ public abstract class AbstractMapleCharacterObject extends AbstractAnimatedMaple
     
     protected void setListener(AbstractCharacterListener listener) {
         this.listener = listener;
-    }
-    
-    public void setMap(MapleMap map) {
-        this.map = map;
-    }
-    
-    public MapleMap getMap() {
-        return map;
     }
     
     public int getStr() {
@@ -212,7 +202,7 @@ public abstract class AbstractMapleCharacterObject extends AbstractAnimatedMaple
         this.hpMpApUsed = mpApUsed;
     }
     
-    private void dispatchHpChanged(final int oldHp) {
+    private void dispatchHpChanged(int oldHp) {
         listener.onHpChanged(oldHp);
     }
     
@@ -224,7 +214,7 @@ public abstract class AbstractMapleCharacterObject extends AbstractAnimatedMaple
         listener.onAnnounceStatPoolUpdate();
     }
     
-    protected void setHp(int newHp) {
+    public void setHp(int newHp) {
         int oldHp = hp;
         
         int thp = newHp;

@@ -69,18 +69,15 @@ public class MapleMarriage extends EventInstanceManager {
     }
 
     public List<Item> getGiftItems(MapleClient c, boolean groom) {
-        if (c.tryacquireClient()) {
-            try {
-                List<Item> gifts = getGiftItemsList(groom);
-                synchronized (gifts) {
-                    return new LinkedList<>(gifts);
-                }
-            } finally {
-                c.releaseClient();
+        c.tryacquireClient();
+        try {
+            List<Item> gifts = getGiftItemsList(groom);
+            synchronized (gifts) {
+                return new LinkedList<>(gifts);
             }
+        } finally {
+            c.releaseClient();
         }
-        
-        return new LinkedList<>();
     }
 
     private List<Item> getGiftItemsList(boolean groom) {
@@ -143,22 +140,21 @@ public class MapleMarriage extends EventInstanceManager {
     }
         
     public static List<Item> loadGiftItemsFromDb(MapleClient c, int cid) {
-        List<Item> items = new LinkedList<>();
-        if (c.tryacquireClient()) {
+        c.tryacquireClient();
+        try {
+            List<Item> items = new LinkedList<>();
             try {
-                try {
-                    for (Pair<Item, MapleInventoryType> it : ItemFactory.MARRIAGE_GIFTS.loadItems(cid, false)) {
-                        items.add(it.getLeft());
-                    }
-                } catch (SQLException sqle) {
-                    sqle.printStackTrace();
+                for (Pair<Item, MapleInventoryType> it : ItemFactory.MARRIAGE_GIFTS.loadItems(cid, false)) {
+                    items.add(it.getLeft());
                 }
-            } finally {
-                c.releaseClient();
+            } catch (SQLException sqle) {
+                sqle.printStackTrace();
             }
+
+            return items;
+        } finally {
+            c.releaseClient();
         }
-        
-        return items;
     }
         
     public void saveGiftItemsToDb(MapleClient c, boolean groom, int cid) {
@@ -171,18 +167,17 @@ public class MapleMarriage extends EventInstanceManager {
             items.add(new Pair<>(it, it.getInventoryType()));
         }
 
-        if (c.tryacquireClient()) {
+        c.tryacquireClient();
+        try {
             try {
-                try {
-                    Connection con = DatabaseConnection.getConnection();
-                    ItemFactory.MARRIAGE_GIFTS.saveItems(items, cid, con);
-                    con.close();
-                } catch (SQLException sqle) {
-                    sqle.printStackTrace();
-                }
-            } finally {
-                c.releaseClient();
+                Connection con = DatabaseConnection.getConnection();
+                ItemFactory.MARRIAGE_GIFTS.saveItems(items, cid, con);
+                con.close();
+            } catch (SQLException sqle) {
+                sqle.printStackTrace();
             }
+        } finally {
+            c.releaseClient();
         }
     }
 }

@@ -3,7 +3,6 @@ var timeLimit = 15; //15 minutes
 var eventTimer = 1000 * 60 * timeLimit;
 var exitMap = 240070000;
 var eventMap = 240070010;
-var eventBossIds = [7120100, 7120101, 7120102, 8120100, 8120101, 8140510];
 
 function init(){}
 
@@ -43,25 +42,20 @@ function playerRevive(eim, player){
 
 function playerDead(eim, player){}
 
-function playerDisconnected(eim, player) {
-        if (eim.isEventTeamLackingNow(true, minPlayers, player)) {
-                eim.unregisterPlayer(player);
-                end(eim);
-        }
-        else
-                eim.unregisterPlayer(player);
+function playerDisconnected(eim, player){
+	var party = eim.getPlayers();
+
+	for(var i = 0; i < party.size(); i++){
+		if(party.get(i).equals(player))
+			removePlayer(eim, player);
+		else
+			playerExit(eim, party.get(i));
+	}
+	eim.dispose();
 }
 
 function monsterValue(eim, mobId){
 	return -1;
-}
-
-function end(eim) {
-        var party = eim.getPlayers();
-        for (var i = 0; i < party.size(); i++) {
-                playerExit(eim, party.get(i));
-        }
-        eim.dispose();
 }
 
 function leftParty(eim, player){}
@@ -75,32 +69,28 @@ function playerExit(eim, player){
 	player.changeMap(exitMap);
 }
 
-function changedMap(eim, player, mapid){
-	if (mapid != (eventMap + 10 * eim.getIntProperty("nex"))) {
-                if (eim.isEventTeamLackingNow(true, minPlayers, player)) {
-                        eim.unregisterPlayer(player);
-                        end(eim);
-                }
-                else
-                        eim.unregisterPlayer(player);
-        }
+function changedMap(eim, player, mapId){
+	if(mapId != (eventMap + 10 * eim.getIntProperty("nex"))){
+		removePlayer(eim, player);
+		eim.stopEventTimer();
+		eim.setEventCleared();
+		eim.dispose();
+	}
+}
+
+function removePlayer(eim, player){
+	eim.unregisterPlayer(player);
+	player.getMap().removePlayer(player);
+	player.setMap(exitMap);
 }
 
 function cancelSchedule(){}
 
 function dispose(){}
 
-function clearPQ(eim){
-        eim.stopEventTimer();
-        eim.setEventCleared();
-}
+function clearPQ(eim){}
 
-function monsterKilled(mob, eim){
-        if (mob.getId() == eventBossIds[eim.getIntProperty("nex")]) {
-                eim.showClearEffect();
-                eim.clearPQ();
-        }
-}
+function monsterKilled(mob, eim){}
 
 function allMonstersDead(eim){}
 

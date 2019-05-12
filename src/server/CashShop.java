@@ -557,7 +557,7 @@ public class CashShop {
         return null;
     }
     
-    public synchronized Pair<Item, Item> openCashShopSurprise() {
+    public synchronized Item openCashShopSurprise() {
         Item css = getCashShopItemByItemid(5222000);
         
         if(css != null) {
@@ -577,7 +577,7 @@ public class CashShop {
                 Item item = cItem.toItem();
                 addToInventory(item);
 
-                return new Pair<>(item, css);
+                return item;
             } else {
                 return null;
             }

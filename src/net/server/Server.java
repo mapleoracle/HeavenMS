@@ -86,7 +86,6 @@ import client.inventory.manipulator.MapleCashidGenerator;
 import client.newyear.NewYearCardRecord;
 import constants.ItemConstants;
 import constants.GameConstants;
-import constants.OpcodeConstants;
 import constants.ServerConstants;
 import java.util.TimeZone;
 import net.server.coordinator.MapleSessionCoordinator;
@@ -99,7 +98,6 @@ import server.quest.MapleQuest;
 import tools.AutoJCE;
 import tools.DatabaseConnection;
 import tools.Pair;
-import org.apache.mina.core.session.IoSession;
 
 public class Server {
     
@@ -928,7 +926,8 @@ public class Server {
         System.out.println("Skills loaded in " + ((System.currentTimeMillis() - timeToTake) / 1000.0) + " seconds");
 
         timeToTake = System.currentTimeMillis();
-        
+        //MapleItemInformationProvider.getInstance().getAllItems(); //unused, rofl
+
         CashItemFactory.getSpecialCashItems();
         System.out.println("Items loaded in " + ((System.currentTimeMillis() - timeToTake) / 1000.0) + " seconds");
         
@@ -970,7 +969,6 @@ public class Server {
         online = true;
         
         MapleSkillbookInformationProvider.getInstance();
-        OpcodeConstants.generateOpcodeNames();
     }
 
     public static void main(String args[]) {
@@ -1632,12 +1630,12 @@ public class Server {
         return gmLevel;
     }
     
-    private static String getRemoteIp(IoSession session) {
-        return MapleSessionCoordinator.getSessionRemoteAddress(session);
+    private static String getRemoteIp(InetSocketAddress isa) {
+        return isa.getAddress().getHostAddress();
     }
     
-    public void setCharacteridInTransition(IoSession session, int charId) {
-        String remoteIp = getRemoteIp(session);
+    public void setCharacteridInTransition(InetSocketAddress isa, int charId) {
+        String remoteIp = getRemoteIp(isa);
         
         lgnWLock.lock();
         try {
@@ -1647,12 +1645,8 @@ public class Server {
         }
     }
     
-    public boolean validateCharacteridInTransition(IoSession session, int charId) {
-        if (!ServerConstants.USE_IP_VALIDATION) {
-            return true;
-        }
-        
-        String remoteIp = getRemoteIp(session);
+    public boolean validateCharacteridInTransition(InetSocketAddress isa, int charId) {
+        String remoteIp = getRemoteIp(isa);
         
         lgnWLock.lock();
         try {
@@ -1660,36 +1654,6 @@ public class Server {
             return cid != null && cid.equals(charId);
         } finally {
             lgnWLock.unlock();
-        }
-    }
-    
-    public Integer freeCharacteridInTransition(IoSession session) {
-        if (!ServerConstants.USE_IP_VALIDATION) {
-            return null;
-        }
-        
-        String remoteIp = getRemoteIp(session);
-        
-        lgnWLock.lock();
-        try {
-            return transitioningChars.remove(remoteIp);
-        } finally {
-            lgnWLock.unlock();
-        }
-    }
-    
-    public boolean hasCharacteridInTransition(IoSession session) {
-        if (!ServerConstants.USE_IP_VALIDATION) {
-            return true;
-        }
-        
-        String remoteIp = getRemoteIp(session);
-        
-        lgnRLock.lock();
-        try {
-            return transitioningChars.containsKey(remoteIp);
-        } finally {
-            lgnRLock.unlock();
         }
     }
     

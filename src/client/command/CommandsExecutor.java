@@ -23,6 +23,7 @@
 */
 package client.command;
 
+import client.command.commands.gm2.KillAllCommand;
 import client.command.commands.gm0.*;
 import client.command.commands.gm1.*;
 import client.command.commands.gm2.*;
@@ -81,7 +82,7 @@ public class CommandsExecutor {
     }
     
     public void handle(MapleClient client, String message){
-        if (client.tryacquireClient()) {
+            if (client.tryacquireClient()) {
             try {
                 handleInternal(client, message);
             } finally {
@@ -113,8 +114,8 @@ public class CommandsExecutor {
             return;
         }
         String[] params;
-        if (lowercaseParams.length > 0 && !lowercaseParams[0].isEmpty()) {
-            params = Arrays.copyOfRange(lowercaseParams, 0, lowercaseParams.length);
+        if (lowercaseParams.length > 0) {
+             params = Arrays.copyOfRange(lowercaseParams, 0, lowercaseParams.length);
         } else {
             params = new String[]{};
         }
@@ -180,13 +181,14 @@ public class CommandsExecutor {
         
         addCommand(new String[]{"help", "commands"}, HelpCommand.class);
         addCommand("droplimit", DropLimitCommand.class);
+        addCommand("home", homeCommand.class);
         addCommand("time", TimeCommand.class);
         addCommand("credits", StaffCommand.class);
         addCommand("buyback", BuyBackCommand.class);
         addCommand("uptime", UptimeCommand.class);
         addCommand("gacha", GachaCommand.class);
         addCommand("dispose", DisposeCommand.class);
-        addCommand("changel", ChangeLanguageCommand.class);
+        addCommand("changel", ChangeLinguaCommand.class);
         addCommand("equiplv",  EquipLvCommand.class);
         addCommand("showrates", ShowRatesCommand.class);
         addCommand("rates", RatesCommand.class);
@@ -204,21 +206,33 @@ public class CommandsExecutor {
         addCommand("enableauth", EnableAuthCommand.class);
         addCommand("toggleexp", ToggleExpCommand.class);
         addCommand("mylawn", MapOwnerClaimCommand.class);
+        /**
+         * New Commands by DarkyDev
+         */
+        addCommand("job", jobClass.class);
+        addCommand("style", StyleCommand.class);
+        addCommand("aio", aioCommand.class);
+        addCommand("rebirth", rebirthCommand.class);
+        /**
+        /**
+         * @TODO: filter goto places by GM LEVEL
+         */
+        addCommand("goto", GotoCommand.class);
         addCommand("bosshp", BossHpCommand.class);
         addCommand("mobhp", MobHpCommand.class);
-        
+        addCommand("whatdropsfrom", WhatDropsFromCommand.class);
+        addCommand("whodrops", WhoDropsCommand.class);
         commandsNameDesc.add(levelCommandsCursor);
     }
 
 
     private void registerLv1Commands() {
         levelCommandsCursor = new Pair<>((List<String>) new ArrayList<String>(), (List<String>) new ArrayList<String>());
-        
-        addCommand("whatdropsfrom", 1, WhatDropsFromCommand.class);
-        addCommand("whodrops", 1, WhoDropsCommand.class);
         addCommand("buffme", 1, BuffMeCommand.class);
-        addCommand("goto", 1, GotoCommand.class);
-        
+        addCommand("donormap", 1, DonormapCommand.class);
+        /**
+         * @TODO: Add VIP Shop Command
+         */
         commandsNameDesc.add(levelCommandsCursor);
     }
 
@@ -256,10 +270,27 @@ public class CommandsExecutor {
         addCommand("search", 2, SearchCommand.class);
         addCommand("jail", 2, JailCommand.class);
         addCommand("unjail", 2, UnJailCommand.class);
-        addCommand("job", 2, JobCommand.class);
+        addCommand("setjob", 2, JobCommand.class);
         addCommand("unbug", 2, UnBugCommand.class);
-        addCommand("id", 2, IdCommand.class);
-        
+        addCommand("gmmap", 2, gmMapCommand.class);
+        /**
+         * Moved by DarkyDev
+         */
+        addCommand("killall", 2, KillAllCommand.class);
+        addCommand("killmap", 2, KillMapCommand.class);
+        addCommand("healmap", 2, HealMapCommand.class);
+        addCommand("startevent", 2, StartEventCommand.class);
+        addCommand("endevent", 2, EndEventCommand.class);
+        addCommand("warpsnowball", 2, WarpSnowBallCommand.class);
+        addCommand("warpmap", 2, WarpMapCommand.class);
+         /* New Commands by Desc (I know i suck, very grr)
+         */
+        addCommand("tag", 2, TagCommand.class);
+
+        /**
+         * OXMap command, by DarkyDev - Make it simple ;)
+         */
+        addCommand("oxmap", 2, oxMapCommand.class);
         commandsNameDesc.add(levelCommandsCursor);
     }
 
@@ -292,27 +323,29 @@ public class CommandsExecutor {
         addCommand("givevp", 3, GiveVpCommand.class);
         addCommand("givems", 3, GiveMesosCommand.class);
         addCommand("giverp", 3, GiveRpCommand.class);
+        addCommand("id", 3, IdCommand.class);
         addCommand("expeds", 3, ExpedsCommand.class);
         addCommand("kill", 3, KillCommand.class);
         addCommand("seed", 3, SeedCommand.class);
         addCommand("maxenergy", 3, MaxEnergyCommand.class);
-        addCommand("killall", 3, KillAllCommand.class);
+        
         addCommand("notice", 3, NoticeCommand.class);
         addCommand("rip", 3, RipCommand.class);
         addCommand("openportal", 3, OpenPortalCommand.class);
         addCommand("closeportal", 3, ClosePortalCommand.class);
         addCommand("pe", 3, PeCommand.class);
-        addCommand("startevent", 3, StartEventCommand.class);
-        addCommand("endevent", 3, EndEventCommand.class);
+        
+        
         addCommand("startmapevent", 3, StartMapEventCommand.class);
         addCommand("stopmapevent", 3, StopMapEventCommand.class);
         addCommand("online2", 3, OnlineTwoCommand.class);
+        
         addCommand("ban", 3, BanCommand.class);
         addCommand("unban", 3, UnBanCommand.class);
-        addCommand("healmap", 3, HealMapCommand.class);
+        
         addCommand("healperson", 3, HealPersonCommand.class);
         addCommand("hurt", 3, HurtCommand.class);
-        addCommand("killmap", 3, KillMapCommand.class);
+        
         addCommand("night", 3, NightCommand.class);
         addCommand("npc", 3, NpcCommand.class);
         addCommand("face", 3, FaceCommand.class);
@@ -323,7 +356,7 @@ public class CommandsExecutor {
         addCommand("timer", 3, TimerCommand.class);
         addCommand("timermap", 3, TimerMapCommand.class);
         addCommand("timerall", 3, TimerAllCommand.class);
-        addCommand("warpmap", 3, WarpMapCommand.class);
+        
         addCommand("warparea", 3, WarpAreaCommand.class);
 
         commandsNameDesc.add(levelCommandsCursor);
@@ -338,7 +371,6 @@ public class CommandsExecutor {
         addCommand("exprate", 4, ExpRateCommand.class);
         addCommand("mesorate", 4, MesoRateCommand.class);
         addCommand("droprate", 4, DropRateCommand.class);
-        addCommand("bossdroprate", 4, BossDropRateCommand.class);
         addCommand("questrate", 4, QuestRateCommand.class);
         addCommand("travelrate", 4, TravelRateCommand.class);
         addCommand("fishrate", 4, FishingRateCommand.class);

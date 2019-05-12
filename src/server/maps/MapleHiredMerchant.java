@@ -34,7 +34,6 @@ import com.mysql.jdbc.Statement;
 import constants.ServerConstants;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,7 +48,6 @@ import tools.DatabaseConnection;
 import tools.MaplePacketCreator;
 import tools.Pair;
 import net.server.audit.locks.MonitoredLockType;
-import server.MapleTrade;
 
 /**
  *
@@ -276,7 +274,6 @@ public class MapleHiredMerchant extends AbstractMapleMapObject {
             if (c.getPlayer().getMeso() >= price) {
                 if (canBuy(c, newItem)) {
                     c.getPlayer().gainMeso(-price, false);
-                    price -= MapleTrade.getFee(price);  // thanks BHB for pointing out trade fees not applying here
                     
                     synchronized (sold) {
                         sold.add(new SoldItem(c.getPlayer().getName(), pItem.getItem().getItemId(), newItem.getQuantity(), price));
@@ -298,20 +295,8 @@ public class MapleHiredMerchant extends AbstractMapleMapObject {
                         try {
                             Connection con = DatabaseConnection.getConnection();
                             
-                            long merchantMesos = 0;
-                            try (PreparedStatement ps = con.prepareStatement("SELECT MerchantMesos FROM characters WHERE id = ?")) {
+                            try (PreparedStatement ps = con.prepareStatement("UPDATE characters SET MerchantMesos = MerchantMesos + " + price + " WHERE id = ?", Statement.RETURN_GENERATED_KEYS)) {
                                 ps.setInt(1, ownerId);
-                                try (ResultSet rs = ps.executeQuery()) {
-                                    if (rs.next()) {
-                                        merchantMesos = rs.getInt(1);
-                                    }
-                                }
-                            }
-                            merchantMesos += price;
-                            
-                            try (PreparedStatement ps = con.prepareStatement("UPDATE characters SET MerchantMesos = ? WHERE id = ?", Statement.RETURN_GENERATED_KEYS)) {
-                                ps.setInt(1, (int) Math.min(merchantMesos, Integer.MAX_VALUE));
-                                ps.setInt(2, ownerId);
                                 ps.executeUpdate();
                             }
                             

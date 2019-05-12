@@ -100,13 +100,12 @@ public final class Channel {
     private Map<Integer, MapleHiredMerchant> hiredMerchants = new HashMap<>();
     private final Map<Integer, Integer> storedVars = new HashMap<>();
     private Set<Integer> playersAway = new HashSet<>();
-    private Map<MapleExpeditionType, MapleExpedition> expeditions = new HashMap<>();
+    private List<MapleExpedition> expeditions = new ArrayList<>();
     private List<MapleExpeditionType> expedType = new ArrayList<>();
     private Set<MapleMap> ownedMaps = Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<MapleMap, Boolean>()));
     private MapleEvent event;
     private boolean finishedShutdown = false;
     private int usedDojo = 0;
-    private Set<Integer> usedMC = new HashSet<>();
     
     private ScheduledFuture<?> respawnTask;
     
@@ -296,22 +295,17 @@ public final class Channel {
     }
     
     private void closeAllMerchants() {
+        merchWlock.lock();
         try {
-            List<MapleHiredMerchant> merchs;
-            
-            merchWlock.lock();
-            try {
-                merchs = new ArrayList<>(hiredMerchants.values());
-                hiredMerchants.clear();
-            } finally {
-                merchWlock.unlock();
-            }
-
-            for (MapleHiredMerchant merch : merchs) {
-                merch.forceClose();
+            final Iterator<MapleHiredMerchant> hmit = hiredMerchants.values().iterator();
+            while (hmit.hasNext()) {
+                hmit.next().forceClose();
+                hmit.remove();
             }
         } catch (Exception e) {
-            e.printStackTrace();
+		e.printStackTrace();
+        } finally {
+                merchWlock.unlock();
         }
     }
     
@@ -473,31 +467,8 @@ public final class Channel {
         return retArr;
     }
     
-    public boolean addExpedition(MapleExpedition exped) {
-        synchronized (expeditions) {
-            if (expeditions.containsKey(exped.getType())) {
-                return false;
-            }
-            
-            expeditions.put(exped.getType(), exped);
-            return true;
-        }
-    }
-    
-    public void removeExpedition(MapleExpedition exped) {
-        synchronized (expeditions) {
-            expeditions.remove(exped.getType());
-        }
-    }
-    
-    public MapleExpedition getExpedition(MapleExpeditionType type) {
-        return expeditions.get(type);
-    }
-    
     public List<MapleExpedition> getExpeditions() {
-        synchronized (expeditions) {
-            return new ArrayList<>(expeditions.values());
-        }
+    	return expeditions;
     }
     
     public boolean isConnected(String name) {
@@ -1019,22 +990,6 @@ public final class Channel {
                 map.checkMapOwnerActivity();
             }
         }
-    }
-    
-    private static int getMonsterCarnivalRoom(boolean cpq1, int field) {
-        return (cpq1 ? 0 : 100) + field;
-    }
-    
-    public void initMonsterCarnival(boolean cpq1, int field) {
-        usedMC.add(getMonsterCarnivalRoom(cpq1, field));
-    }
-    
-    public void finishMonsterCarnival(boolean cpq1, int field) {
-        usedMC.remove(getMonsterCarnivalRoom(cpq1, field));
-    }
-    
-    public boolean canInitMonsterCarnival(boolean cpq1, int field) {
-        return !usedMC.contains(getMonsterCarnivalRoom(cpq1, field));
     }
     
     private static int getChannelSchedulerIndex(int mapid) {

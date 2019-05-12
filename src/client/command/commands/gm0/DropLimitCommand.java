@@ -29,7 +29,7 @@ import constants.ServerConstants;
 
 public class DropLimitCommand extends Command {
     {
-        setDescription("");
+        setDescription("Shows current drop limit");
     }
     
     @Override

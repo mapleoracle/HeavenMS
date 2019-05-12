@@ -36,6 +36,7 @@ function action(mode, type, selection) {
     if (status == 0)
         cm.sendNext("Then, I will send you out from here. Good job.");
     else{
+        cm.getPlayer().levelUp(true);
         cm.warp(40000, 0);
         cm.dispose();
     }

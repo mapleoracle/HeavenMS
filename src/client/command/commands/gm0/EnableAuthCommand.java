@@ -29,7 +29,7 @@ import net.server.coordinator.MapleLoginBypassCoordinator;
 
 public class EnableAuthCommand extends Command {
     {
-        setDescription("");
+        setDescription("Enables your authentication");
     }
 
     @Override

@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package client.autoban;
 
 import client.MapleCharacter;
+import client.MapleJob;
 import constants.ServerConstants;
 import net.server.Server;
 import tools.FilePrinter;
@@ -56,6 +57,7 @@ public enum AutobanFactory {
 
 	private int points;
 	private long expiretime;
+        private int job;
 
 	private AutobanFactory() {
 		this(1, -1);
@@ -84,6 +86,12 @@ public enum AutobanFactory {
 	}
 	
 	public void alert(MapleCharacter chr, String reason) {
+            if (chr.isGM()) {
+                return;
+            }
+//            if(chr.getJob() == MapleJob.SUPERGM || chr.getJob() == MapleJob.GM) {
+//                return;
+//            }
             if(ServerConstants.USE_AUTOBAN == true) {
 		if (chr != null && MapleLogger.ignored.contains(chr.getName())){
 			return;
@@ -96,9 +104,16 @@ public enum AutobanFactory {
 	}
 	
 	public void autoban(MapleCharacter chr, String value) {
-            if(ServerConstants.USE_AUTOBAN == true) {
-		chr.autoban("Autobanned for (" + this.name() + ": " + value + ")");
-		//chr.sendPolice("You will be disconnected for (" + this.name() + ": " + value + ")");
+            if (chr.isGM()) {
+                return;
+            }
+//            if(chr.getJob() == MapleJob.SUPERGM || chr.getJob() == MapleJob.GM) {
+//                return;
+//            }
+                if(ServerConstants.USE_AUTOBAN == true) {
+                    chr.autoban("Autobanned for (" + this.name() + ": " + value + ")");
+                    //chr.sendPolice("You will be disconnected for (" + this.name() + ": " + value + ")");
+                
             }
 	}
 }

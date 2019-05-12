@@ -23,6 +23,7 @@
     @author Ronan
  */
  var status;
+ var job;
 
 function start() {
     status = -1;
@@ -41,27 +42,22 @@ function action(mode, type, selection) {
         cm.dispose();
         return;
     }
+
     if (status == 0) {
-        cm.sendNext("Come to me when you want to be reborn again. You currently have a total of #r" + cm.getChar().getReborns() + " #krebirths.");
+        cm.sendNext("You currently have a total of #r" + cm.getChar().getReborns() + " #krebirths.");
     } else if (status == 1) {
-        cm.sendSimple("What do you want me to do today: \r\n \r\n #L0##bI want to be rebirthed#l \r\n #L1##bMaybe next time#k#l");
+        cm.sendYesNo("Do you want to be reborn?");
     } else if (status == 2) {
-        if (selection == 0) {
-            if (cm.getChar().getLevel() == 200) {
-                cm.sendYesNo("Are you sure you want to be rebirthed?");
-            } else {
-                cm.sendOk("You are not level 200, please come back when you hit level 200.");
-                cm.dispose();
-            }
-        } else if (selection == 1) {
-            cm.sendOk("Ok Bye")
+        if (cm.getChar().getLevel() == 200) {
+            cm.sendYesNo("Are you sure you want to be reborn?");
+        } else {
+            cm.sendOk("You are not level 200, please come back when you hit level 200.");
             cm.dispose();
         }
     } else if (status == 3 && type == 1) {
         cm.getChar().executeReborn();
+        cm.changeJobById(0);
         cm.sendOk("You have now been reborn. That's a total of #r" + cm.getChar().getReborns() + "#k rebirths");
         cm.dispose();
     }
-
-
 }

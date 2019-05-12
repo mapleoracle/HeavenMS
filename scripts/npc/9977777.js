@@ -46,8 +46,6 @@ function writeFeatureTab_PQs() {
         addFeature("GuildPQ & queue with multi-lobby system available.");
         addFeature("Brand-new PQs: BossRushPQ, CafePQ.");
         addFeature("Mu Lung Dojo.");
-        addFeature("Monster Carnival 1 & 2 - thanks Dragohe4rt & Jayd!");
-        addFeature("AriantPQ - thanks Dragohe4rt & Jayd!");
         addFeature("Capt. Latanica with party fighting the boss.");
         addFeature("Filled up missing obligatory event script methods.");
         addFeature("Secured uniquety of active lobby-name instances.");
@@ -76,7 +74,6 @@ function writeFeatureTab_Quests() {
 
 function writeFeatureTab_PlayerSocialNetwork() {
         addFeature("Guild and Alliance system fully functional.");
-        addFeature("Guild contract system held in Guild Headquarters.");
         addFeature("Party for novices-only.");
         addFeature("P. members' HPBar accounts HP gain on equips.");
         addFeature("Thoroughly reviewed P. Shops and H. Merchants.");
@@ -88,7 +85,6 @@ function writeFeatureTab_PlayerSocialNetwork() {
         addFeature("Protected and improved face expression system.");
         addFeature("Automated support for Player NPCs and Hall of Fame.");
         addFeature("Engagement & Wedding system with ring effects.");
-        addFeature("Wedding Wishlists - thanks Dragohe4rt!");
         addFeature("Equipments displays to everyone it's level & EXP info.");
         addFeature("Further improved the existent minigame mechanics.");
         addFeature("Trade complete using handshake synchronization.");
@@ -192,7 +188,6 @@ function writeFeatureTab_Serverpotentials() {
         addFeature("Enhanced AP auto-assigner: focus on eqp demands.");
         addFeature("Enhanced inventory check: free slots smartly fetched.");
         addFeature("Enhanced petloot handler: no brute-force inv. checks.");
-        addFeature("Matching system: everyone's decision to trigger action.");
         addFeature("Players-appointed bestsellers for Owl and Cash Shop.");
         addFeature("Tweaked pet/mount hunger to a balanced growth rate.");
         addFeature("Consistent experience and meso gain system.");
@@ -208,7 +203,6 @@ function writeFeatureTab_Serverpotentials() {
         addFeature("Custom jail system.");
         addFeature("Custom buyback system, uses mesos / NX, via MTS.");
         addFeature("Custom fishing system having 'seasonal' catch times.");
-        addFeature("Actual fishing handling w/ F. Net - thanks Dragohe4rt!");
         addFeature("Custom map leasing system.");
         addFeature("Delete Character.");
         addFeature("Smooth view-all-char, now showing all account chars.");
@@ -222,7 +216,6 @@ function writeFeatureTab_Serverpotentials() {
         addFeature("SP cap past tier-level, recovered after job upgrade.");
         addFeature("Bypassable PIN/PIC system for authenticated users.");
         addFeature("Automatic account registration - thanks shavit!");
-        addFeature("Any NPC scriptable - thanks GabrielSin!");
 }
 
 function writeFeatureTab_Commands() {

@@ -35,7 +35,7 @@ import net.server.world.World;
  */
 public class IpListCommand extends Command {
     {
-        setDescription("");
+        setDescription("Shows list of players with corresponding IP Address");
     }
 
     @Override

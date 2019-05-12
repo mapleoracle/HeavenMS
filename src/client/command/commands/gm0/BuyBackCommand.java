@@ -29,7 +29,7 @@ import client.processor.BuybackProcessor;
 
 public class BuyBackCommand extends Command {
     {
-        setDescription("");
+        setDescription("Buy back something you sold");
     }
     
     @Override

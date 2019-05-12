@@ -35,7 +35,7 @@ public class MapleMapItem extends AbstractMapleMapObject {
     protected MapleMapObject dropper;
     protected int character_ownerid, party_ownerid, meso, questid = -1;
     protected byte type;
-    protected boolean pickedUp = false, playerDrop, partyDrop;
+    protected boolean pickedUp = false, playerDrop;
     protected long dropTime;
     private Lock itemLock = MonitoredReentrantLockFactory.createLock(MonitoredLockType.MAP_ITEM);
 
@@ -45,7 +45,6 @@ public class MapleMapItem extends AbstractMapleMapObject {
 	this.dropper = dropper;
         this.character_ownerid = owner.getId();
         this.party_ownerid = owner.getPartyId();
-        this.partyDrop = this.party_ownerid != -1;
         this.ownerClient = owner.getClient();
 	this.meso = 0;
 	this.type = type;
@@ -58,7 +57,6 @@ public class MapleMapItem extends AbstractMapleMapObject {
 	this.dropper = dropper;
         this.character_ownerid = owner.getId();
         this.party_ownerid = owner.getPartyId();
-        this.partyDrop = this.party_ownerid != -1;
 	this.ownerClient = owner.getClient();
         this.meso = 0;
 	this.type = type;
@@ -72,7 +70,6 @@ public class MapleMapItem extends AbstractMapleMapObject {
 	this.dropper = dropper;
 	this.character_ownerid = owner.getId();
         this.party_ownerid = owner.getPartyId();
-        this.partyDrop = this.party_ownerid != -1;
         this.ownerClient = owner.getClient();
         this.meso = meso;
 	this.type = type;
@@ -106,18 +103,6 @@ public class MapleMapItem extends AbstractMapleMapObject {
     
     public final void setPartyOwnerId(int partyid) {
         party_ownerid = partyid;
-    }
-    
-    public final int getClientsideOwnerId() {   // thanks nozphex (RedHat) for noting an issue with collecting party items
-        if (this.party_ownerid == -1) {
-            return this.character_ownerid;
-        } else {
-            return this.party_ownerid;
-        }
-    }
-    
-    public final boolean hasClientsideOwnership(MapleCharacter player) {
-        return this.character_ownerid == player.getId() || this.party_ownerid == player.getPartyId() || hasExpiredOwnershipTime();
     }
     
     public final boolean isFFADrop() {
@@ -202,7 +187,7 @@ public class MapleMapItem extends AbstractMapleMapObject {
 	if (chr.needQuestItem(questid, getItemId())) {
 	    this.lockItem();
             try {
-                client.announce(MaplePacketCreator.dropItemFromMapObject(chr, this, null, getPosition(), (byte) 2));
+                client.announce(MaplePacketCreator.dropItemFromMapObject(chr.getParty() != null, this, null, getPosition(), (byte) 2));
             } finally {
                 this.unlockItem();
             }

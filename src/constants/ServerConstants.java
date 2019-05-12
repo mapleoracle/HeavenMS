@@ -28,7 +28,7 @@ public class ServerConstants {
     public static final long  COUPON_INTERVAL = 60 * 60 * 1000;	//60 minutes, 3600000.
     public static final long  UPDATE_INTERVAL = 777;            //Dictates the frequency on which the "centralized server time" is updated.
     
-    public static final boolean ENABLE_PIC = false;             //Pick true/false to enable or disable Pic. Delete character requires PIC available.
+    public static final boolean ENABLE_PIC = true;             //Pick true/false to enable or disable Pic. Delete character required PIC available.
     public static final boolean ENABLE_PIN = false;             //Pick true/false to enable or disable Pin.
     
     public static final int BYPASS_PIC_EXPIRATION = 20;         //Enables PIC bypass, which will remain active for that account by that client machine for N minutes. Set 0 to disable.
@@ -48,7 +48,6 @@ public class ServerConstants {
     
     //Ip Configuration
     public static String HOST;
-    public static boolean LOCALSERVER;
 
     //Other Configuration
     public static boolean JAVA_8;
@@ -57,23 +56,20 @@ public class ServerConstants {
     
     
     //Server Flags
-    public static final boolean USE_CUSTOM_KEYSET = true;           //Enables auto-setup of the HeavenMS's custom keybindings when creating characters.
+    public static final boolean USE_CUSTOM_KEYSET = false;           //Enables auto-setup of the HeavenMS's custom keybindings when creating characters.
     public static final boolean USE_DEBUG = false;                  //Will enable some text prints on the client, oriented for debugging purposes.
     public static final boolean USE_DEBUG_SHOW_INFO_EQPEXP = false; //Prints on the cmd all equip exp gain info.
     public static       boolean USE_DEBUG_SHOW_RCVD_PACKET = false; //Prints on the cmd all received packet ids.
     public static       boolean USE_DEBUG_SHOW_RCVD_MVLIFE = false; //Prints on the cmd all received move life content.
-    public static final boolean USE_DEBUG_SHOW_PACKET = false;
     public static       boolean USE_SUPPLY_RATE_COUPONS = true;     //Allows rate coupons to be sold through the Cash Shop.
-    public static final boolean USE_IP_VALIDATION = true;           //Enables IP checking when logging in.
     
     public static final boolean USE_MAXRANGE = true;                //Will send and receive packets from all events on a map, rather than those of only view range.
     public static final boolean USE_MAXRANGE_ECHO_OF_HERO = true;
     public static final boolean USE_MTS = false;
-    public static final boolean USE_CPQ = true;                     //Renders the CPQ available or not.
     public static final boolean USE_AUTOHIDE_GM = false;            //When enabled, GMs are automatically hidden when joining. Thanks to Steven Deblois (steven1152).
     public static final boolean USE_BUYBACK_SYSTEM = true;          //Enables the HeavenMS-builtin buyback system, to be used by dead players when clicking the MTS button.
     public static final boolean USE_FIXED_RATIO_HPMP_UPDATE = true; //Enables the HeavenMS-builtin HPMP update based on the current pool to max pool ratio.
-    public static final boolean USE_FAMILY_SYSTEM = false;
+    public static final boolean USE_FAMILY_SYSTEM = true;
     public static final boolean USE_DUEY = true;
     public static final boolean USE_RANDOMIZE_HPMP_GAIN = true;     //Enables randomizing on MaxHP/MaxMP gains and INT accounting for the MaxMP gain.
     public static final boolean USE_STORAGE_ITEM_SORT = true;       //Enables storage "Arrange Items" feature.
@@ -110,10 +106,8 @@ public class ServerConstants {
     public static final boolean USE_BANISHABLE_TOWN_SCROLL = true;  //Enables town scrolls to act as if it's a "player banish", rendering the antibanish scroll effect available.
     public static final boolean USE_ENABLE_FULL_RESPAWN = true;     //At respawn task, always respawn missing mobs when they're available. Spawn count doesn't depend on how many players are currently there.
     public static final boolean USE_ENABLE_CHAT_LOG = false;        //Write in-game chat to log
-    public static final boolean USE_REBIRTH_SYSTEM = false;         //Flag to enable/disable rebirth system
+    public static final boolean USE_REBIRTH_SYSTEM = true;         //Flag to enable/disable rebirth system
     public static final boolean USE_MAP_OWNERSHIP_SYSTEM = true;    //Flag to enable/disable map ownership system
-    public static final boolean USE_FISHING_SYSTEM = true;          //Flag to enable/disable fishing system
-    public static final boolean USE_NPCS_SCRIPTABLE = true;         //Flag to enable/disable serverside predefined script NPCs.
     
     //Events/PQs Configuration
     public static final boolean USE_OLD_GMS_STYLED_PQ_NPCS = true;  //Enables PQ NPCs with similar behaviour to old GMS style, that skips info about the PQs and immediately tries to register the party in.
@@ -141,10 +135,10 @@ public class ServerConstants {
     public static final boolean USE_WHOLE_SERVER_RANKING = false;   //Enables a ranking pool made from every character registered on the server for the "ranks" command, instead of separated by worlds.
     
     //Server Rates And Experience
-    public static final int EXP_RATE = 10;                          //NOTE: World-specific rates within "world.ini" OVERRIDES the default rates from here.
-    public static final int MESO_RATE = 10;
-    public static final int DROP_RATE = 10;
-    public static final int BOSS_DROP_RATE = 10;                    //NOTE: Boss drop rate OVERRIDES common drop rate, for bosses-only.
+    public static final int EXP_RATE = 18;                          //NOTE: World-specific rates within "world.ini" OVERRIDES the default rates from here.
+    public static final int MESO_RATE = 6;
+    public static final int DROP_RATE = 6;
+    public static final int BOSS_DROP_RATE = 5;                    //NOTE: Boss drop rate OVERRIDES common drop rate, for bosses-only.
     public static final int QUEST_RATE = 5;                         //Multiplier for Exp & Meso gains when completing a quest. Only available when USE_QUEST_RATE is true. Stacks with server Exp & Meso rates.
     public static final int FISHING_RATE = 10;                      //Multiplier for success likelihood on meso thrown during fishing.
     public static final int TRAVEL_RATE = 10;                       //Means of transportation rides/departs using 1/N of the default time.
@@ -152,6 +146,8 @@ public class ServerConstants {
     public static final double EQUIP_EXP_RATE = 1.0;                //Rate for equipment exp gain, grows linearly. Set 1.0 for default (about 100~200 same-level range mobs killed to pass equip from level 1 to 2).
     public static final float PARTY_BONUS_EXP_RATE = 1.0f;          //Rate for the party exp bonus reward.
     public static final double PQ_BONUS_EXP_RATE = 0.5;             //Rate for the PQ exp reward.
+    
+    public static final int PARTY_EXPERIENCE_MOD = 1;               //Change for event stuff.
     
     //Miscellaneous Configuration
     public static String TIMEZONE = "GMT-3";
@@ -166,7 +162,6 @@ public class ServerConstants {
     public static final long PET_LOOT_UPON_ATTACK = (long)(0.7 * 1000); //Time the pet must wait before trying to pick items up.
     public static final int TOT_MOB_QUEST_REQUIREMENT = 77;             //Overwrites old 999-mobs requirement for the ToT questline with new requirement value, set 0 for default.
     public static final int MOB_REACTOR_REFRESH_TIME = 30 * 1000;       //Overwrites refresh time for those reactors oriented to inflict damage to bosses (Ice Queen, Riche), set 0 for default.
-    public static final int PARTY_SEARCH_REENTRY_LIMIT = 10;            //Max amount of times a party leader is allowed to persist on the Party Search before entry expiration (thus needing to manually restart the Party Search to be able to search for members).
     
     //Dangling Items/Locks Configuration
     public static final int ITEM_EXPIRE_TIME  = 3 * 60 * 1000;  //Time before items start disappearing. Recommended to be set up to 3 minutes.
@@ -224,7 +219,6 @@ public class ServerConstants {
     public static final int QUEST_POINT_PER_EVENT_CLEAR = 1;     //Each completed event instance awards N quest points, set 0 to disable.
     
     //Guild Configuration
-    public static final int CREATE_GUILD_MIN_PARTNERS = 6;       //Minimum number of members on Guild Headquarters to establish a new guild.
     public static final int CREATE_GUILD_COST = 1500000;
     public static final int CHANGE_EMBLEM_COST = 5000000;
     public static final int EXPAND_GUILD_BASE_COST = 500000;
@@ -308,7 +302,6 @@ public class ServerConstants {
 
             //Server Host
             ServerConstants.HOST = p.getProperty("HOST");
-            ServerConstants.LOCALSERVER = ServerConstants.HOST.startsWith("127.") || ServerConstants.HOST.startsWith("localhost");
 
             //Sql Database
             ServerConstants.DB_URL = p.getProperty("URL");

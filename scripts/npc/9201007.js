@@ -111,7 +111,7 @@ function action(mode, type, selection) {
     } else if (status == 1) {
         var cmPartner;
         try {
-            cmPartner = cm.getMap().getCharacterById(cm.getPlayer().getPartnerId()).getAbstractPlayerInteraction();
+            cmPartner = cm.getMap().getCharacterById(cm.getPlayer().getPartnerId()).getClient().getAbstractPlayerInteraction();
         } catch(err) {
             cmPartner = null;
         }

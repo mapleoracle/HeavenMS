@@ -30,7 +30,7 @@ import tools.MaplePacketCreator;
 
 public class DisposeCommand extends Command {
     {
-        setDescription("");
+        setDescription("Used when you can't talk to NPC correctly");
     }
 
     @Override

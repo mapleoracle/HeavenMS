@@ -52,7 +52,6 @@ public class FilePrinter {
             EXPLOITS = "game/exploits/",
             STORAGE = "game/storage/",
             PACKET_LOGS = "game/packetlogs/",
-            PACKET_STREAM = "game/packetstream/",
             FREDRICK = "game/npcs/fredrick/",
             NPC_UNCODED = "game/npcs/UncodedNPCs.txt",
             QUEST_UNCODED = "game/quests/UncodedQuests.txt",

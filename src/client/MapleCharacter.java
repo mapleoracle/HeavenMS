@@ -64,7 +64,6 @@ import net.server.world.MapleParty;
 import net.server.world.MaplePartyCharacter;
 import net.server.world.PartyOperation;
 import net.server.world.World;
-import scripting.AbstractPlayerInteraction;
 import scripting.event.EventInstanceManager;
 import server.CashShop;
 import server.MapleItemInformationProvider;
@@ -101,7 +100,6 @@ import server.life.MaplePlayerNPC;
 import server.life.MonsterDropEntry;
 import server.maps.SavedLocation;
 import server.maps.SavedLocationType;
-import server.partyquest.AriantColiseum;
 import server.partyquest.MonsterCarnival;
 import server.partyquest.MonsterCarnivalParty;
 import server.partyquest.PartyQuest;
@@ -133,6 +131,7 @@ import client.processor.FredrickProcessor;
 import constants.ExpTable;
 import constants.GameConstants;
 import constants.ItemConstants;
+import constants.LanguageConstants;
 import constants.ServerConstants;
 import constants.skills.Aran;
 import constants.skills.Beginner;
@@ -162,12 +161,13 @@ import constants.skills.Shadower;
 import constants.skills.Sniper;
 import constants.skills.Swordsman;
 import constants.skills.ThunderBreaker;
+import net.server.channel.handlers.PartyOperationHandler;
 import scripting.item.ItemScriptManager;
 import server.life.MobSkillFactory;
 import server.maps.MapleMapItem;
 import net.server.audit.locks.MonitoredLockType;
 import net.server.audit.locks.factory.MonitoredReentrantLockFactory;
-import org.apache.mina.util.ConcurrentHashSet;
+import scripting.AbstractPlayerInteraction;
 
 public class MapleCharacter extends AbstractMapleCharacterObject {
     private static final MapleItemInformationProvider ii = MapleItemInformationProvider.getInstance();
@@ -197,11 +197,11 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
     private int battleshipHp = 0;
     private int mesosTraded = 0;
     private int possibleReports = 10;
-    private int ariantPoints, dojoPoints, vanquisherStage, dojoStage, dojoEnergy, vanquisherKills;
+    private int dojoPoints, vanquisherStage, dojoStage, dojoEnergy, vanquisherKills;
     private int expRate = 1, mesoRate = 1, dropRate = 1, expCoupon = 1, mesoCoupon = 1, dropCoupon = 1;
     private int omokwins, omokties, omoklosses, matchcardwins, matchcardties, matchcardlosses;
     private int owlSearch;
-    private long lastfametime, lastUsedCashItem, lastExpression = 0, lastHealed, lastBuyback = 0, lastDeathtime, jailExpiration = -1;
+    private long lastfametime, lastUsedCashItem, lastExpression = 0, lastHealed, lastBuyback = 0, lastDeathtime, lastMesoDrop = -1, jailExpiration = -1;
     private transient int localstr, localdex, localluk, localint_, localmagic, localwatk;
     private transient int equipmaxhp, equipmaxmp, equipstr, equipdex, equipluk, equipint_, equipmagic, equipwatk, localchairhp, localchairmp;
     private int localchairrate;
@@ -231,6 +231,7 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
     private MaplePartyCharacter mpc = null;
     private MapleInventory[] inventory;
     private MapleJob job = MapleJob.BEGINNER;
+    private MapleMap map;
     private MapleMessenger messenger = null;
     private MapleMiniGame miniGame;
     private MapleMount maplemount;
@@ -251,7 +252,7 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
     private final Map<Short, MapleQuestStatus> quests;
     private Set<MapleMonster> controlled = new LinkedHashSet<>();
     private Map<Integer, String> entered = new LinkedHashMap<>();
-    private Set<MapleMapObject> visibleMapObjects = new ConcurrentHashSet<>();
+    private Set<MapleMapObject> visibleMapObjects = new LinkedHashSet<>();
     private Map<Skill, SkillEntry> skills = new LinkedHashMap<>();
     private Map<Integer, Integer> activeCoupons = new LinkedHashMap<>();
     private Map<Integer, Integer> activeCouponRates = new LinkedHashMap<>();
@@ -437,10 +438,10 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         ret.accountid = c.getAccID();
         ret.buddylist = new BuddyList(20);
         ret.maplemount = null;
-        ret.getInventory(MapleInventoryType.EQUIP).setSlotLimit(24);
-        ret.getInventory(MapleInventoryType.USE).setSlotLimit(24);
-        ret.getInventory(MapleInventoryType.SETUP).setSlotLimit(24);
-        ret.getInventory(MapleInventoryType.ETC).setSlotLimit(24);
+        ret.getInventory(MapleInventoryType.EQUIP).setSlotLimit(96);
+        ret.getInventory(MapleInventoryType.USE).setSlotLimit(96);
+        ret.getInventory(MapleInventoryType.SETUP).setSlotLimit(96);
+        ret.getInventory(MapleInventoryType.ETC).setSlotLimit(96);
         
         // Select a keybinding method
         int[] selectedKey;
@@ -502,10 +503,6 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         } else {
             client.getChannelServer().removePlayerAway(id);
         }
-    }
-    
-    public void setSessionTransitionState() {
-        client.getSession().setAttribute(MapleClient.CLIENT_TRANSITION);
     }
     
     public long getPetLootCd() {
@@ -1066,14 +1063,12 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
             gainSp(spGain, GameConstants.getSkillBook(newJob.getId()), true);
         }
         
-        // thanks xinyifly for finding out missing AP awards (AP Reset can be used as a compass)
-        if (newJob.getId() % 100 >= 1) {
-            if (this.isCygnus()) {
-                gainAp(7, true);
-            } else {
-                gainAp(5, true);
-            }
+        // thanks xinyifly for finding out job advancements awarding APs
+        /*
+        if (newJob.getId() % 10 >= 1) {
+            gainAp(5, true);
         }
+        */
         
         if (!isGM()) {
             for (byte i = 1; i < 5; i++) {
@@ -1133,7 +1128,6 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
             effLock.unlock();
         }
         
-        setMPC(new MaplePartyCharacter(this));
         silentPartyUpdate();
         
         if (dragon != null) {
@@ -1158,7 +1152,7 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         
         if (ServerConstants.USE_ANNOUNCE_CHANGEJOB) {
             if (!this.isGM()) {
-                broadcastAcquaintances(6, "[" + GameConstants.ordinal(GameConstants.getJobBranch(newJob)) + " Job] " + name + " has just become a " + GameConstants.getJobName(this.job.getId()) + ".");    // thanks Vcoc for noticing job name appearing in uppercase here
+                broadcastAcquaintances(6, "[" + GameConstants.ordinal(GameConstants.getJobBranch(newJob)) + " Job] " + name + " has just become a " + newJob.name() + ".");
             }
         }
     }
@@ -1205,16 +1199,14 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
     }
     
     public MapleMap getWarpMap(int map) {
-	MapleMap warpMap;
+	MapleMap target;
         EventInstanceManager eim = getEventInstance();
-	if (eim != null) {
-            warpMap = eim.getMapInstance(map);
-        } else if (this.getMonsterCarnival() != null && this.getMonsterCarnival().getEventMap().getId() == map) {
-            warpMap = this.getMonsterCarnival().getEventMap();
+	if (eim == null) {
+            target = client.getChannelServer().getMapFactory().getMap(map);
 	} else {
-            warpMap = client.getChannelServer().getMapFactory().getMap(map);
+            target = eim.getMapInstance(map);
 	}
-	return warpMap;
+	return target;
     }
     
     // for use ONLY inside OnUserEnter map scripts that requires a player to change map while still moving between maps.
@@ -1480,23 +1472,13 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
             partyLeaver = this;
         }
         
-        MapleMap map = this.getMap();
-        List<MapleMapItem> partyItems = null;
-        
-        int partyId = exPartyMembers != null ? -1 : this.getPartyId();
+        int partyId = exPartyMembers != null ? 0 : this.getPartyId();
         for(WeakReference<MapleMap> mapRef : mapids) {
             MapleMap mapObj = mapRef.get();
             
             if(mapObj != null) {
-                List<MapleMapItem> partyMapItems = mapObj.updatePlayerItemDropsToParty(partyId, id, partyMembers, partyLeaver);
-                if (map.hashCode() == mapObj.hashCode()) {
-                    partyItems = partyMapItems;
-                }
+                mapObj.updatePlayerItemDrops(partyId, id, partyMembers, partyLeaver);
             }
-        }
-        
-        if (partyItems != null && exPartyMembers == null) {
-            map.updatePartyItemDropsToNewcomer(this, partyItems);
         }
         
         updatePartyTownDoors(party, this, partyLeaver, partyMembers);
@@ -1830,14 +1812,14 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         }
     }
     
-    public boolean applyConsumeOnPickup(final int itemid) {
-        if (itemid / 1000000 == 2) {
-            if (ii.isConsumeOnPickup(itemid)) {
-                if (ItemConstants.isPartyItem(itemid)) {
+    private boolean useItem(final int id) {
+        if (id / 1000000 == 2) {
+            if (ii.isConsumeOnPickup(id)) {
+                if (ItemConstants.isPartyItem(id)) {
                     List<MapleCharacter> pchr = this.getPartyMembersOnSameMap();
                     
-                    if(!ItemConstants.isPartyAllcure(itemid)) {
-                        MapleStatEffect mse = ii.getItemEffect(itemid);
+                    if(!ItemConstants.isPartyAllcure(id)) {
+                        MapleStatEffect mse = ii.getItemEffect(id);
                         
                         if(!pchr.isEmpty()) {
                             for (MapleCharacter mc : pchr) {
@@ -1856,11 +1838,7 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
                         }
                     }
                 } else {
-                    ii.getItemEffect(itemid).applyTo(this);
-                }
-                
-                if (itemid / 10000 == 238) {
-                    this.getMonsterBook().addCard(client, itemid);
+                    ii.getItemEffect(id).applyTo(this);
                 }
                 return true;
             }
@@ -1977,16 +1955,18 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
                         this.getCashShop().gainCash(1, nxGain);
                         
                         showHint("You have earned #e#b" + nxGain + " NX#k#n. (" + this.getCashShop().getCash(1) + " NX)", 300);
-                    } else if (applyConsumeOnPickup(mItem.getItemId())) {
-                    } else if (MapleInventoryManipulator.addFromDrop(client, mItem, true)) {
-                        if (mItem.getItemId() == 4031868) {
-                            updateAriantScore();
+                    } else if (useItem(mItem.getItemId())) {
+                        if (mItem.getItemId() / 10000 == 238) {
+                            this.getMonsterBook().addCard(client, mItem.getItemId());
                         }
+                    } else if (MapleInventoryManipulator.addFromDrop(client, mItem, true)) {
+                    } else if (mItem.getItemId() == 4031868) {
+                        this.getMap().broadcastMessage(MaplePacketCreator.updateAriantPQRanking(this.getName(), this.getItemQuantity(4031868, false), false));
                     } else {
                         client.announce(MaplePacketCreator.enableActions());
                         return;
                     }
-
+                    
                     this.getMap().pickItemDrop(pickupPacket, mapitem);
                 } else if(!hasSpaceInventory) {
                     client.announce(MaplePacketCreator.getInventoryFull());
@@ -2956,24 +2936,22 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
 
     public void gainGachaExp() {
         int expgain = 0;
-        long currentgexp = gachaexp.get();
+        int currentgexp = gachaexp.get();
         if ((currentgexp + exp.get()) >= ExpTable.getExpNeededForLevel(level)) {
             expgain += ExpTable.getExpNeededForLevel(level) - exp.get();
-            
             int nextneed = ExpTable.getExpNeededForLevel(level + 1);
-            if (currentgexp - expgain >= nextneed) {
+            if ((currentgexp - expgain) >= nextneed) {
                 expgain += nextneed;
             }
-            
-            this.gachaexp.set((int) (currentgexp - expgain));
+            this.gachaexp.set(currentgexp - expgain);
         } else {
             expgain = this.gachaexp.getAndSet(0);
         }
-        gainExp(expgain, false, true);
+        gainExp(expgain, false, false);
         updateSingleStat(MapleStat.GACHAEXP, this.gachaexp.get());
     }
 
-    public void addGachaExp(int gain) {
+    public void gainGachaExp(int gain) {
         updateSingleStat(MapleStat.GACHAEXP, gachaexp.addAndGet(gain));
     }
     
@@ -3005,7 +2983,8 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         
         int equip = (int) Math.min((long)(gain / 10) * pendantExp, Integer.MAX_VALUE);
         
-        gainExpInternal((long) gain, equip, party, show, inChat, white);
+        long total = (long) gain + equip + party;
+        gainExpInternal(total, equip, party, show, inChat, white);
     }
     
     public void loseExp(int loss, boolean show, boolean inChat) {
@@ -3016,23 +2995,8 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         gainExpInternal(-loss, 0, 0, show, inChat, white);
     }
     
-    private void announceExpGain(long gain, int equip, int party, boolean inChat, boolean white) {
-        gain = Math.min(gain, Integer.MAX_VALUE);
-        if (gain == 0) {
-            if (party == 0) {
-                return;
-            }
-            
-            gain = party;
-            party = 0;
-            white = false;
-        }
-        
-        client.announce(MaplePacketCreator.getShowExpGain((int) gain, equip, party, inChat, white));
-    }
-    
     private synchronized void gainExpInternal(long gain, int equip, int party, boolean show, boolean inChat, boolean white) {   // need of method synchonization here detected thanks to MedicOP
-        long total = Math.max(gain + equip + party, -exp.get());
+        long total = Math.max(gain, -exp.get());
         
         if (level < getMaxLevel() && (allowExpGain || this.getEventInstance() != null)) {
             long leftover = 0;
@@ -3043,8 +3007,8 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
                 leftover = nextExp - Integer.MAX_VALUE;
             }
             updateSingleStat(MapleStat.EXP, exp.addAndGet((int) total));
-            if (show) {
-                announceExpGain(gain, equip, party, inChat, white);
+            if (show && gain != 0) {
+                client.announce(MaplePacketCreator.getShowExpGain((int)Math.min(gain, Integer.MAX_VALUE), equip, party, inChat, white));
             }
             while (exp.get() >= ExpTable.getExpNeededForLevel(level)) {
                 levelUp(true);
@@ -3177,21 +3141,6 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
 
     public static int getAriantSlotsRoom(int room) {
         return ariantroomslot[room];
-    }
-    
-    public void updateAriantScore() {
-        updateAriantScore(0);
-    }
-    
-    public void updateAriantScore(int dropQty) {
-        AriantColiseum arena = this.getAriantColiseum();
-        if (arena != null) {
-            arena.updateAriantScore(this, countItem(4031868));
-            
-            if (dropQty > 0) {
-                arena.addLostShards(dropQty);
-            }
-        }
     }
 
     public int getBattleshipHp() {
@@ -4300,10 +4249,6 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         return client;
     }
     
-    public AbstractPlayerInteraction getAbstractPlayerInteraction() {
-        return client.getAbstractPlayerInteraction();
-    }
-    
     public final List<MapleQuestStatus> getCompletedQuests() {
         synchronized (quests) {
             List<MapleQuestStatus> ret = new LinkedList<>();
@@ -4854,6 +4799,10 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         }
     }
 
+    public MapleMap getMap() {
+        return map;
+    }
+
     public int getMapId() {
         if (map != null) {
             return map.getId();
@@ -4938,9 +4887,8 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         
         if (elapsedDays > 100) elapsedDays = 100;
         
-        long netMeso = (long) merchantmeso; // negative mesos issues found thanks to Flash, Vcoc
-        netMeso = (netMeso * (100 - elapsedDays)) / 100;
-        return (int) netMeso;
+        int netMeso = (merchantmeso * (100 - elapsedDays)) / 100;
+        return netMeso;
     }
 
     public int getMesosTraded() {
@@ -5699,11 +5647,11 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
     }
 
     public boolean haveItem(int itemid) {
-        return getItemQuantity(itemid, ItemConstants.isEquipment(itemid)) > 0;
+        return getItemQuantity(itemid, false) > 0;
     }
     
     public boolean haveCleanItem(int itemid) {
-        return getCleanItemQuantity(itemid, ItemConstants.isEquipment(itemid)) > 0;
+        return getCleanItemQuantity(itemid, false) > 0;
     }
     
     public boolean hasEmptySlot(int itemId) {
@@ -5899,7 +5847,7 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
     }
     
     public boolean attemptCatchFish(int baitLevel) {
-        return ServerConstants.USE_FISHING_SYSTEM && GameConstants.isFishingArea(mapid) && this.getPosition().getY() > 0 && ItemConstants.isFishingChair(chair.get()) && this.getWorldServer().registerFisherPlayer(this, baitLevel);
+        return GameConstants.isFishingArea(mapid) && this.getPosition().getY() > 0 && ItemConstants.isFishingChair(chair.get()) && this.getWorldServer().registerFisherPlayer(this, baitLevel);
     }
     
     public void leaveMap() {
@@ -5912,11 +5860,6 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         
         if (map.unclaimOwnership(this)) {
             map.dropMessage(5, "This lawn is now free real estate.");
-        }
-        
-        AriantColiseum arena = this.getAriantColiseum();
-        if (arena != null) {
-            arena.leaveArena(this);
         }
     }
     
@@ -6026,15 +5969,8 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
             }
         } else {
             int remainingAp = 5;
-            
-            if (isCygnus()) {
-                if (level > 10) {
-                    if (level <= 17) {
-                        remainingAp += 2;
-                    } else if (level < 77) {
-                        remainingAp++;
-                    }
-                }
+            if (isCygnus() && level > 10 && level < 70) {
+                remainingAp++;
             }
             
             gainAp(remainingAp, true);
@@ -6183,7 +6119,23 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
             Runnable r = new Runnable() {
                 @Override
                 public void run() {
-                    if (leaveParty()) {
+                    MapleParty party;
+                    boolean partyLeader;
+                    
+                    prtLock.lock();
+                    try {
+                        party = getParty();
+                        partyLeader = party != null && isPartyLeader();
+                    } finally {
+                        prtLock.unlock();
+                    }
+                    
+                    if (party != null) {
+                        if(partyLeader) {
+                            party.assignNewLeader(client);
+                        }
+                        PartyOperationHandler.leaveParty(party, mpc, client);
+
                         showHint("You have reached #blevel 10#k, therefore you must leave your #rstarter party#k.");
                     }
                 }
@@ -6194,28 +6146,6 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
 
         levelUpMessages();
         guildUpdate();
-    }
-    
-    public boolean leaveParty() {
-        MapleParty party;
-        boolean partyLeader;
-
-        prtLock.lock();
-        try {
-            party = getParty();
-            partyLeader = party != null && isPartyLeader();
-        } finally {
-            prtLock.unlock();
-        }
-
-        if (party != null) {
-            if(partyLeader) party.assignNewLeader(client);
-            MapleParty.leaveParty(party, client);
-
-            return true;
-        } else {
-            return false;
-        }
     }
 
     private void levelUpMessages() {
@@ -6709,7 +6639,6 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
             ret.monsterbook = new MonsterBook();
             ret.monsterbook.loadCards(charid);
             ret.vanquisherStage = rs.getInt("vanquisherStage");
-            ret.ariantPoints = rs.getInt("ariantPoints");
             ret.dojoPoints = rs.getInt("dojoPoints");
             ret.dojoStage = rs.getInt("lastDojoStage");
             ret.dataString = rs.getString("dataString");
@@ -6799,7 +6728,7 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
                 ret.map = mapFactory.getMap(ret.mapid);
                 
                 if (ret.map == null) {
-                    ret.map = mapFactory.getMap(100000000);
+                    ret.map = mapFactory.getMap(4);
                 }
                 MaplePortal portal = ret.map.getPortal(ret.initialSpawnPoint);
                 if (portal == null) {
@@ -6915,7 +6844,6 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
                     }
 
                     status.setForfeited(rs.getInt("forfeited"));
-                    status.setCompleted(rs.getInt("completed"));
                     ret.quests.put(q.getId(), status);
                     loadedQuestStatus.put(rs.getInt("queststatusid"), status);
                 }
@@ -7163,12 +7091,12 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
 
     private void playerDead() {
         if (this.getMap().isCPQMap()) {
-            int losing = getMap().getDeathCP();
-            if (getCP() < losing) {
-                losing = getCP();
+            int lost = getCP();
+            if (lost > 6) {
+                lost = 6;
             }
-            getMap().broadcastMessage(MaplePacketCreator.playerDiedMessage(getName(), losing, getTeam()));
-            gainCP(-losing);
+            getMap().broadcastMessage(MaplePacketCreator.playerDiedMessage(getName(), lost, getTeam()));
+            gainCP(-lost);
             return;
         }
         
@@ -7675,8 +7603,7 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
     }
     
     public void resetBattleshipHp() {
-        int bshipLevel = Math.max(getLevel() - 120, 0);  // thanks alex12 for noticing battleship HP issues for low-level players
-        this.battleshipHp = 400 * getSkillLevel(SkillFactory.getSkill(Corsair.BATTLE_SHIP)) + (bshipLevel * 200);
+        this.battleshipHp = 400 * getSkillLevel(SkillFactory.getSkill(Corsair.BATTLE_SHIP)) + ((getLevel() - 120) * 200);
     }
     
     public void resetEnteredScript() {
@@ -7979,7 +7906,7 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
             con.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
             con.setAutoCommit(false);
             PreparedStatement ps;
-            ps = con.prepareStatement("UPDATE characters SET level = ?, fame = ?, str = ?, dex = ?, luk = ?, `int` = ?, exp = ?, gachaexp = ?, hp = ?, mp = ?, maxhp = ?, maxmp = ?, sp = ?, ap = ?, gm = ?, skincolor = ?, gender = ?, job = ?, hair = ?, face = ?, map = ?, meso = ?, hpMpUsed = ?, spawnpoint = ?, party = ?, buddyCapacity = ?, messengerid = ?, messengerposition = ?, mountlevel = ?, mountexp = ?, mounttiredness= ?, equipslots = ?, useslots = ?, setupslots = ?, etcslots = ?,  monsterbookcover = ?, vanquisherStage = ?, dojoPoints = ?, lastDojoStage = ?, finishedDojoTutorial = ?, vanquisherKills = ?, matchcardwins = ?, matchcardlosses = ?, matchcardties = ?, omokwins = ?, omoklosses = ?, omokties = ?, dataString = ?, fquest = ?, jailexpire = ?, partnerId = ?, marriageItemId = ?, lastExpGainTime = ?, ariantPoints = ? WHERE id = ?", Statement.RETURN_GENERATED_KEYS);
+            ps = con.prepareStatement("UPDATE characters SET level = ?, fame = ?, str = ?, dex = ?, luk = ?, `int` = ?, exp = ?, gachaexp = ?, hp = ?, mp = ?, maxhp = ?, maxmp = ?, sp = ?, ap = ?, gm = ?, skincolor = ?, gender = ?, job = ?, hair = ?, face = ?, map = ?, meso = ?, hpMpUsed = ?, spawnpoint = ?, party = ?, buddyCapacity = ?, messengerid = ?, messengerposition = ?, mountlevel = ?, mountexp = ?, mounttiredness= ?, equipslots = ?, useslots = ?, setupslots = ?, etcslots = ?,  monsterbookcover = ?, vanquisherStage = ?, dojoPoints = ?, lastDojoStage = ?, finishedDojoTutorial = ?, vanquisherKills = ?, matchcardwins = ?, matchcardlosses = ?, matchcardties = ?, omokwins = ?, omoklosses = ?, omokties = ?, dataString = ?, fquest = ?, jailexpire = ?, partnerId = ?, marriageItemId = ?, lastExpGainTime = ?, name= ? WHERE id = ?", Statement.RETURN_GENERATED_KEYS);
             if (gmLevel < 1 && level > 199) {
                 ps.setInt(1, isCygnus() ? 120 : 200);
             } else {
@@ -8020,7 +7947,7 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
             ps.setInt(19, hair);
             ps.setInt(20, face);
             if (map == null || (cashshop != null && cashshop.isOpened())) {
-                ps.setInt(21, mapid);
+                ps.setInt(21, 4);
             } else {
                 if (map.getForcedReturnId() != 999999999) {
                     ps.setInt(21, map.getForcedReturnId());
@@ -8093,7 +8020,7 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
             ps.setInt(51, partnerId);
             ps.setInt(52, marriageItemid);
             ps.setTimestamp(53, new Timestamp(lastExpGainTime));
-            ps.setInt(54, ariantPoints);
+            ps.setString(54, name);
             ps.setInt(55, id);
 
             int updateRows = ps.executeUpdate();
@@ -8265,7 +8192,7 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
             
             deleteQuestProgressWhereCharacterId(con, id);
             
-            ps = con.prepareStatement("INSERT INTO queststatus (`queststatusid`, `characterid`, `quest`, `status`, `time`, `expires`, `forfeited`, `completed`) VALUES (DEFAULT, ?, ?, ?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
+            ps = con.prepareStatement("INSERT INTO queststatus (`queststatusid`, `characterid`, `quest`, `status`, `time`, `expires`, `forfeited`) VALUES (DEFAULT, ?, ?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
             PreparedStatement psf;
             try (PreparedStatement pse = con.prepareStatement("INSERT INTO questprogress VALUES (DEFAULT, ?, ?, ?, ?)")) {
                 psf = con.prepareStatement("INSERT INTO medalmaps VALUES (DEFAULT, ?, ?, ?)");
@@ -8278,7 +8205,6 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
                         ps.setInt(4, (int) (q.getCompletionTime() / 1000));
                         ps.setLong(5, q.getExpirationTime());
                         ps.setInt(6, q.getForfeited());
-                        ps.setInt(7, q.getCompleted());
                         ps.executeUpdate();
                         try (ResultSet rs = ps.getGeneratedKeys()) {
                             rs.next();
@@ -8561,10 +8487,8 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
     
     public synchronized void withdrawMerchantMesos() {
         int merchantMeso = this.getMerchantNetMeso();
-        int playerMeso = this.getMeso();
-        
         if (merchantMeso > 0) {
-            int possible = Integer.MAX_VALUE - playerMeso;
+            int possible = Integer.MAX_VALUE - merchantMeso;
             
             if (possible > 0) {
                 if (possible < merchantMeso) {
@@ -8576,6 +8500,7 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
                 }
             }
         } else {
+            int playerMeso = this.getMeso();
             int nextMeso = playerMeso + merchantMeso;
             
             if (nextMeso < 0) {
@@ -8603,23 +8528,14 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
                 }
             }
         }
-        
-        final boolean chrDied = playerDied;
-        Runnable r = new Runnable() {
-            @Override
-            public void run() {
-                updatePartyMemberHP();    // thanks BHB (BHB88) for detecting a deadlock case within player stats.
 
-                if (chrDied) {
-                    playerDead();
-                } else {
-                    checkBerserk(isHidden());
-                }
-            }
-        };
-        if (map != null) {
-            map.registerCharacterStatUpdate(r);
-	}
+        updatePartyMemberHP();
+
+        if (playerDied) {
+            playerDead();
+        } else {
+            checkBerserk(isHidden());
+        }
     }
     
     private Pair<MapleStat, Integer> calcHpRatioUpdate(int newHp, int oldHp) {
@@ -8729,6 +8645,10 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
     
     public void setMap(int PmapId) {
         this.mapid = PmapId;
+    }
+
+    public void setMap(MapleMap newmap) {
+        this.map = newmap;
     }
     
     public void setMessenger(MapleMessenger messenger) {
@@ -9415,10 +9335,9 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         } else if (quest.getStatus().equals(MapleQuestStatus.Status.COMPLETED)) {
             MapleQuest mquest = quest.getQuest();
             short questid = mquest.getId();
-            if (!mquest.isSameDayRepeatable() && !MapleQuest.isExploitableQuest(questid)) {
+            if(!mquest.isSameDayRepeatable() && !MapleQuest.isExploitableQuest(questid)) {
                 awardQuestPoint(ServerConstants.QUEST_POINT_PER_QUEST_COMPLETE);
             }
-            quest.setCompleted(quest.getCompleted() + 1);   // count quest completed Jayd's idea
             
             announce(MaplePacketCreator.completeQuest(questid, quest.getCompletionTime()));
         } else if (quest.getStatus().equals(MapleQuestStatus.Status.NOT_STARTED)) {
@@ -10055,6 +9974,14 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         whiteChat = !whiteChat;
     }
 
+    public boolean canDropMeso() {
+        if (System.currentTimeMillis() - lastMesoDrop >= 200 || lastMesoDrop == -1) { //About 200 meso drops a minute
+            lastMesoDrop = System.currentTimeMillis();
+            return true;
+        }
+        return false;
+    }
+
     // These need to be renamed, but I am too lazy right now to go through the scripts and rename them...
     public String getPartyQuestItems() {
         return dataString;
@@ -10213,11 +10140,15 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         if (getLevel() != 200) {
             return;
         }
+        
         addReborns();
         changeJob(MapleJob.BEGINNER);
         setLevel(0);
         levelUp(true);
+
     }
+    
+    
     
     //EVENTS
     private byte team = 0;
@@ -10259,16 +10190,13 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
     
     // MCPQ
     
-    public AriantColiseum ariantColiseum;
-    private MonsterCarnival monsterCarnival;
-    private MonsterCarnivalParty monsterCarnivalParty = null;
-    
     private int cp = 0;
     private int totCP = 0;
+    private MonsterCarnival monsterCarnival;
+    private MonsterCarnivalParty monsterCarnivalParty = null;
     private int FestivalPoints;
     private boolean challenged = false;
-    public short totalCP, availableCP;
-    
+
     public void gainFestivalPoints(int gain) {
         this.FestivalPoints += gain;
     }
@@ -10284,6 +10212,8 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
     public int getCP() {
         return cp;
     }
+
+    public short totalCP, availableCP;
 
     public void addCP(int ammount) {
         totalCP += ammount;
@@ -10347,14 +10277,6 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         this.monsterCarnival = monsterCarnival;
     }
     
-    public AriantColiseum getAriantColiseum() {
-        return ariantColiseum;
-    }
-
-    public void setAriantColiseum(AriantColiseum ariantColiseum) {
-        this.ariantColiseum = ariantColiseum;
-    }
-    
     public MonsterCarnivalParty getMonsterCarnivalParty() {
         return this.monsterCarnivalParty;
     }
@@ -10370,20 +10292,12 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
     public void setChallenged(boolean challenged) {
         this.challenged = challenged;
     }
-    
-    public void gainAriantPoints(int points) {
-        this.ariantPoints += points;
-    }
-    
-    public int getAriantPoints() {
-        return this.ariantPoints;
-    }
 
-    public void setLanguage(int num) {
-        getClient().setLanguage(num);
+    public void setLingua(int num) {
+        getClient().setLingua(num);
         try {
             Connection con = DatabaseConnection.getConnection();
-            try (PreparedStatement ps = con.prepareStatement("UPDATE accounts SET language = ? WHERE id = ?")) {
+            try (PreparedStatement ps = con.prepareStatement("UPDATE accounts SET lingua = ? WHERE id = ?")) {
                 ps.setInt(1, num);
                 ps.setInt(2, getClient().getAccID());
                 ps.executeUpdate();
@@ -10395,8 +10309,8 @@ public class MapleCharacter extends AbstractMapleCharacterObject {
         }
     }
 
-    public int getLanguage() {
-        return getClient().getLanguage();
+    public int getLingua() {
+        return getClient().getLingua();
     }
     
 }

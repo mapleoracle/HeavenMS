@@ -26,33 +26,46 @@
 */
 var status = 0;
 
+/*
+	This file is part of the MapleOracle Server
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation version 3 as published by
+    the Free Software Foundation. You may not use, modify or distribute
+    this program under any other version of the GNU Affero General Public
+    License.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+/* @Author Desc
+ * ESS Map 4
+ * Welcome NPC
+ */
+
+var status;
+
 function start() {
-    cm.sendSimple("Do you have any business with me?\r\n#L0##bPlease tell me about this place.#l\r\n#L1#I'm here through a word from Mar the Fairy...#k#l");
+    cm.sendYesNo("Hi welcome to MapleOracle, im Ess are you ready to be sent to the real world?.");
 }
 
 function action(mode, type, selection) {
-    if (mode == -1) {
+    status++;
+    if (mode != 1){
+        if(mode == 0)
+            cm.sendOk("That was the wrong answer try again!");
         cm.dispose();
-    } else if (mode == 0) {
-        cm.sendNext("Hmmm ... too busy to do it right now? If you feel like doing it, though, come back and find me.");
-        cm.dispose();
-    } else {
-        status++;
-        if (status == 1) {
-            if (selection == 0) {
-                if (cm.haveItem(4031035)) {
-                    cm.sendNext("Get that letter, jump over obstacles with your pet, and take that letter to my brother Trainer Frod. Give him the letter and something good is going to happen to your pet.");
-                    cm.dispose();
-                } else
-                    cm.sendYesNo("This is the road where you can go take a walk with your pet. You can just walk around with it, or you can train your pet to go through the obstacles here. If you aren't too close with your pet yet, that may present a problem and he will not follow your command as much... So, what do you think? Wanna train your pet?");
-            } else {
-                cm.sendOk("Hey, are you sure you've met #bMar the Fairy#k? Don't lie to me if you've never met her before because it's obvious. That wasn't even a good lie!!");
-                cm.dispose();
-            }
-        } else if (status == 2) {
-            cm.gainItem(4031035, 1);
-            cm.sendNext("Ok, here's the letter. He wouldn't know I sent you if you just went there straight, so go through the obstacles with your pet, go to the very top, and then talk to Trainer Frod to give him the letter. It won't be hard if you pay attention to your pet while going through obstacles. Good luck!");
-            cm.dispose();
-        }
+        return;
     }
-}
+    if (status == 0)
+        cm.sendOk("The first rebirth is on the house. Good luck.");
+        cm.setjob("910")  
+        cm.dispose();
+        
+    }

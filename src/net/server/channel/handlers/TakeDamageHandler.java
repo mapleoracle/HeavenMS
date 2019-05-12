@@ -27,7 +27,6 @@ import client.MapleClient;
 import client.Skill;
 import client.SkillFactory;
 import client.inventory.Item;
-import client.inventory.MapleInventory;
 import client.inventory.MapleInventoryType;
 import client.status.MonsterStatus;
 import client.status.MonsterStatusEffect;
@@ -35,6 +34,7 @@ import constants.GameConstants;
 import constants.ItemConstants;
 import constants.ServerConstants;
 import constants.skills.Aran;
+import constants.skills.Corsair;
 
 import java.awt.Point;
 import java.util.Collections;
@@ -44,7 +44,6 @@ import java.util.List;
 import net.AbstractMaplePacketHandler;
 import client.inventory.manipulator.MapleInventoryManipulator;
 import server.MapleStatEffect;
-import server.life.MapleLifeFactory;
 import server.life.MapleLifeFactory.loseItem;
 import server.life.MapleMonster;
 import server.life.MobAttackInfo;
@@ -88,65 +87,39 @@ public final class TakeDamageHandler extends AbstractMaplePacketHandler {
                     }
                 }
                 
-                if (monsteridfrom == 9300166 && attacker == null) {
-                    if (c.tryacquireClient()) {
-                        try {
-                            attacker = MapleLifeFactory.getMonster(monsteridfrom);
-                        } finally {
-                            c.releaseClient();
-                        }
-                    }
-                }
-                
                 if (attacker != null) {
+                    List<loseItem> loseItems;
+                    
                     if (attacker.isBuffed(MonsterStatus.NEUTRALISE)) {
                         return;
                     }
-                    
-                    List<loseItem> loseItems;
                     if (damage > 0) {
-                        loseItems = attacker.getStats().loseItem();
-                        if (loseItems != null) {
-                            if (chr.getBuffEffect(MapleBuffStat.ARIANT_PQ_SHIELD) == null) {
+                        MapleMonster assaulter = map.getMonsterById(monsteridfrom);
+                        
+                        if(assaulter != null) {
+                            loseItems = assaulter.getStats().loseItem();
+                            if (loseItems != null) {
                                 MapleInventoryType type;
                                 final int playerpos = chr.getPosition().x;
                                 byte d = 1;
                                 Point pos = new Point(0, chr.getPosition().y);
                                 for (loseItem loseItem : loseItems) {
                                     type = ItemConstants.getInventoryType(loseItem.getId());
-                                    
-                                    int dropCount = 0;
-                                    for (byte b = 0; b < loseItem.getX(); b++) {
+                                    for (byte b = 0; b < loseItem.getX(); b++) {//LOL?
                                         if (Randomizer.nextInt(100) < loseItem.getChance()) {
-                                            dropCount += 1;
-                                        }
-                                    }
-                                    
-                                    if (dropCount > 0) {
-                                        int qty;
-                                    
-                                        MapleInventory inv = chr.getInventory(type);
-                                        inv.lockInventory();
-                                        try {
-                                            qty = Math.min(chr.countItem(loseItem.getId()), dropCount);
-                                            MapleInventoryManipulator.removeById(c, type, loseItem.getId(), qty, false, false);
-                                        } finally {
-                                            inv.unlockInventory();
-                                        }
-                                        
-                                        if (loseItem.getId() == 4031868) {
-                                            chr.updateAriantScore();
-                                        }
-
-                                        for (byte b = 0; b < qty; b++) {
-                                            pos.x = (int) (playerpos + ((d % 2 == 0) ? (25 * (d + 1) / 2) : -(25 * (d / 2))));
-                                            map.spawnItemDrop(chr, chr, new Item(loseItem.getId(), (short) 0, (short) 1), map.calcDropPos(pos, chr.getPosition()), true, true);
-                                            d++;
+                                            if (chr.haveItem(loseItem.getId())) {
+                                                pos.x = (int) (playerpos + ((d % 2 == 0) ? (25 * (d + 1) / 2) : -(25 * (d / 2))));
+                                                MapleInventoryManipulator.removeById(c, type, loseItem.getId(), 1, false, false);
+                                                map.spawnItemDrop(chr, chr, new Item(loseItem.getId(), (short) 0, (short) 1), map.calcDropPos(pos, chr.getPosition()), true, true);
+                                                d++;
+                                            } else {
+                                                break;
+                                            }
                                         }
                                     }
                                 }
+                                map.removeMapObject(attacker);
                             }
-                            map.removeMapObject(attacker);
                         }
                     }
                 } else {
@@ -212,30 +185,21 @@ public final class TakeDamageHandler extends AbstractMaplePacketHandler {
             chr.getAutobanManager().resetMisses();
         }
         if (damage > 0 && !chr.isHidden()) {
-            if (attacker != null) {
-                if (damagefrom == -1) {
-                    if (chr.getBuffedValue(MapleBuffStat.POWERGUARD) != null) { // PG works on bosses, but only at half of the rate.
-                        int bouncedamage = (int) (damage * (chr.getBuffedValue(MapleBuffStat.POWERGUARD).doubleValue() / (attacker.isBoss() ? 200 : 100)));
-                        bouncedamage = Math.min(bouncedamage, attacker.getMaxHp() / 10);
-                        damage -= bouncedamage;
-                        map.damageMonster(chr, attacker, bouncedamage);
-                        map.broadcastMessage(chr, MaplePacketCreator.damageMonster(oid, bouncedamage), false, true);
-                        attacker.aggroMonsterDamage(chr, bouncedamage);
+            if (attacker != null && damagefrom == -1 && chr.getBuffedValue(MapleBuffStat.POWERGUARD) != null) { // PG works on bosses, but only at half of the rate.
+                int bouncedamage = (int) (damage * (chr.getBuffedValue(MapleBuffStat.POWERGUARD).doubleValue() / (attacker.isBoss() ? 200 : 100)));
+                bouncedamage = Math.min(bouncedamage, attacker.getMaxHp() / 10);
+                damage -= bouncedamage;
+                map.damageMonster(chr, attacker, bouncedamage);
+                map.broadcastMessage(chr, MaplePacketCreator.damageMonster(oid, bouncedamage), false, true);
+                attacker.aggroMonsterDamage(chr, bouncedamage);
+            }
+            if (attacker != null && damagefrom == -1 && chr.getBuffedValue(MapleBuffStat.BODY_PRESSURE) != null) {
+                Skill skill = SkillFactory.getSkill(Aran.BODY_PRESSURE);
+                final MapleStatEffect eff = skill.getEffect(chr.getSkillLevel(skill));
+                if (!attacker.alreadyBuffedStats().contains(MonsterStatus.NEUTRALISE)) {
+                    if (!attacker.isBoss() && eff.makeChanceResult()) {
+                    	attacker.applyStatus(chr, new MonsterStatusEffect(Collections.singletonMap(MonsterStatus.NEUTRALISE, 1), skill, null, false), false, (eff.getDuration()/10) * 2, false);
                     }
-                    MapleStatEffect bPressure = chr.getBuffEffect(MapleBuffStat.COMBO_BARRIER);
-                    if (bPressure != null) {
-                        Skill skill = SkillFactory.getSkill(Aran.BODY_PRESSURE);
-                        if (!attacker.alreadyBuffedStats().contains(MonsterStatus.NEUTRALISE)) {
-                            if (!attacker.isBoss() && bPressure.makeChanceResult()) {
-                                attacker.applyStatus(chr, new MonsterStatusEffect(Collections.singletonMap(MonsterStatus.NEUTRALISE, 1), skill, null, false), false, (bPressure.getDuration() / 10) * 2, false);
-                            }
-                        }
-                    }
-                }
-                
-                MapleStatEffect cBarrier = chr.getBuffEffect(MapleBuffStat.COMBO_BARRIER);  // thanks BHB for noticing Combo Barrier buff not working
-                if (cBarrier != null) {
-                    damage *= (cBarrier.getX() / 1000.0);
                 }
             }
             if (damagefrom != -3 && damagefrom != -4) {

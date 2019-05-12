@@ -31,7 +31,6 @@ import constants.ExpTable;
 import net.AbstractMaplePacketHandler;
 import client.inventory.manipulator.MapleInventoryManipulator;
 import tools.MaplePacketCreator;
-import tools.Pair;
 import tools.data.input.SeekableLittleEndianAccessor;
 
 /**
@@ -51,8 +50,6 @@ public final class UseMountFoodHandler extends AbstractMaplePacketHandler {
         
         if (c.tryacquireClient()) {
             try {
-                Boolean mountLevelup = null;
-                
                 useInv.lockInventory();
                 try {
                     Item item = useInv.getItem(pos);
@@ -70,18 +67,13 @@ public final class UseMountFoodHandler extends AbstractMaplePacketHandler {
                             if (levelup) {
                                 mount.setLevel(level + 1);
                             }
-                            
-                            mountLevelup = levelup;
+                            chr.getMap().broadcastMessage(MaplePacketCreator.updateMount(chr.getId(), mount, levelup));
                         }
 
                         MapleInventoryManipulator.removeById(c, MapleInventoryType.USE, itemid, 1, true, false);
                     }
                 } finally {
                     useInv.unlockInventory();
-                }
-                
-                if (mountLevelup != null) {
-                    chr.getMap().broadcastMessage(MaplePacketCreator.updateMount(chr.getId(), mount, mountLevelup));
                 }
             } finally {
                 c.releaseClient();

@@ -1,53 +1,64 @@
-/*
-	This file is part of the OdinMS Maple Story Server
-    Copyright (C) 2008 Patrick Huy <patrick.huy@frz.cc>
-		       Matthias Butz <matze@odinms.de>
-		       Jan Christian Meyer <vimes@odinms.de>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as
-    published by the Free Software Foundation version 3 as published by
-    the Free Software Foundation. You may not use, modify or distribute
-    this program under any other version of the GNU Affero General Public
-    License.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-/* Fredrick NPC (9030000)
- * @author kevintjuh93
- */
-
-var status;
-
-function start() {
-    status = -1;
-    action(1, 0, 0);
+/** 
+ * Created by : Shawn of RaGEZONE 
+ **/ 
+var name = "#b#eMapleOracle#k#n"; 
+var talk = "What would you like to browse?\r\n\r\n"; 
+var menu = ["Common","Warrior","Magician","Archer","Thief","Pirate","NX Items","ETC"]; 
+var options = [ 
+/*Common*/    ["Hats","Earrings","Necklaces and Face Accessories","Capes","Overalls","Gloves","Shields","Shoes","Maple Weapons","Level 0 Weapons"],  
+/*Warrior*/    ["Hats","Tops","Bottoms","Overalls","Gloves","Shields","Shoes","1H Axes","2H Axes","1H BWs","2H BWs","1H Swords","2H Swords","Spears","Pole Arms"],  
+/*Mage*/    ["Hats","Overalls","Gloves","Shields","Shoes","Wands","Staffs"],  
+/*Archer*/    ["Hats","Overalls","Gloves","Shoes","Bows","CrossBows","Arrows"],  
+/*Thief*/    ["Hats","Tops","Bottoms","Overalls","Gloves","Shields","Shoes","Daggers","Claws","Throwing Stars"],  
+/*Pirate*/    ["Hats","Overalls","Gloves","Shoes","Weapons","Bullets and Capsules"],  
+/*NX*/        ["Hats","Earrings","Face","Tops","Bottoms","Capes","Overalls","Rings","Gloves","Shields","Shoes","Weapons","Throwing Stars","Pets","Pet Misc","Emotion","Effects","Accessories","Player FM Stores"],  
+/*ETC*/        ["Messengers","Super Megaphones, Gachapon Tickets, Rocks, and Morphs","Boss Pieces","Buffs and Potions","Scrolls","Summoning Sacks","Chairs","Mounts"]]; 
+var colors = ["#g","#r","#d","#b"]; 
+var rand = Math.floor(Math.random()*4); 
+var rand2 = Math.ceil(Math.floor(Math.random()*4)); 
+var c; 
+npc = 0; 
+function start() { 
+    var text = "Hello #e#d#h ##k#n. I am the All in One seller of "+name+". "+talk+""; 
+    for (var z = 0; z < menu.length; z++) 
+        text+= "#L"+z+"##e"+colors[rand]+""+menu[z]+"#l\r\n"; 
+    cm.sendSimple(text); 
 } 
+function action(m,t,s) { 
 
-function action(mode, type, selection) {
-    if (mode == 1)
-        status++;
-    else {
-        cm.dispose();
-        return;
-    }
-	if (status == 0)
-		if (!cm.hasMerchant() && cm.hasMerchantItems()) {
-			cm.showFredrick();
-			cm.dispose();
-		} else {
-			if (cm.hasMerchant()) {
-				cm.sendOk("You have a Merchant open.");
-				cm.dispose();
-			} else {
-				cm.sendOk("You don't have any items or mesos to be retrieved.");
-				cm.dispose();
-			}
-		}
-}
+    if (m != 1) { 
+        cm.dispose(); 
+        npc = 0;
+        return; 
+    }else{ 
+        npc++; 
+    } 
+    if (npc == 1) { 
+        c = s; 
+        talk = '';
+        for (var i = 0; i < options[c].length; i++) 
+            talk+="#L"+i+"##e"+colors[rand2]+""+options[c][i]+"#k#l\r\n"; 
+        cm.sendSimple(talk); 
+    } else if (npc == 2) { 
+        var incp = 6000+((c*100)+s);
+        cm.openShopNPC(incp); 
+        npc = 0;
+        cm.dispose(); 
+    } 
+}  
+
+//function start() {
+//    
+//}
+//
+//function action(m,t,s) {
+//    if (m != 1) {
+//        cm.dispose();
+//    } else {
+//        action = 1;
+//        var text = "Hello #e#d#h ##k#n. I am the All in One seller of "+name+". "+talk+""; 
+//    for (var z = 0; z < menu.length; z++) 
+//        text+= "#L"+z+"##e"+colors[rand]+""+menu[z]+"#l\r\n"; 
+//    cm.sendSimple(text); 
+//    }
+//}

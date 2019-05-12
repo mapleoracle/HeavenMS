@@ -34,7 +34,6 @@ import org.apache.mina.core.session.IoSession;
 
 import client.MapleClient;
 import constants.ServerConstants;
-import java.net.InetSocketAddress;
 
 import net.server.Server;
 import net.server.audit.locks.MonitoredLockType;
@@ -106,19 +105,6 @@ public class MapleServerHandler extends IoHandlerAdapter {
     
     @Override
     public void sessionOpened(IoSession session) {
-        String remoteHost;
-        try {
-            remoteHost = ((InetSocketAddress) session.getRemoteAddress()).getAddress().getHostAddress();
-            
-            if (remoteHost == null) {
-                remoteHost = "null";
-            }
-        } catch (NullPointerException npe) {    // thanks Agassy, Alchemist for pointing out possibility of remoteHost = null.
-            remoteHost = "null";
-        }
-        
-        session.setAttribute(MapleClient.CLIENT_REMOTE_ADDRESS, remoteHost);
-        
         if (!Server.getInstance().isOnline()) {
             MapleSessionCoordinator.getInstance().closeSession(session, true);
             return;
@@ -161,10 +147,11 @@ public class MapleServerHandler extends IoHandlerAdapter {
         MapleClient client = (MapleClient) session.getAttribute(MapleClient.CLIENT_KEY);
         if (client != null) {
             try {
-                // client freeze issues on session transition states found thanks to yolinlin, Omo Oppa, Nozphex
-                if (!session.containsAttribute(MapleClient.CLIENT_TRANSITION)) {
-                    client.disconnect(false, false);
+                boolean inCashShop = false;
+                if (client.getPlayer() != null) {
+                    inCashShop = client.getPlayer().getCashShop().isOpened();
                 }
+                client.disconnect(false, inCashShop);
             } catch (Throwable t) {
                 FilePrinter.printError(FilePrinter.ACCOUNT_STUCK, t);
             } finally {

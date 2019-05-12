@@ -58,8 +58,8 @@ import client.inventory.MapleInventory;
 import client.inventory.MapleInventoryType;
 import client.inventory.MaplePet;
 import constants.GameConstants;
-import constants.ScriptableNPCConstants;
 import constants.ServerConstants;
+import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -128,7 +128,7 @@ public final class PlayerLoggedinHandler extends AbstractMaplePacketHandler {
                 IoSession session = c.getSession();
                 String remoteHwid;
                 if (player == null) {
-                    if (!server.validateCharacteridInTransition(session, cid)) {
+                    if (!server.validateCharacteridInTransition((InetSocketAddress) session.getRemoteAddress(), cid)) {
                         c.disconnect(true, false);
                         return;
                     }
@@ -404,10 +404,6 @@ public final class PlayerLoggedinHandler extends AbstractMaplePacketHandler {
                     if (eim != null) {
                         eim.registerPlayer(player);
                     }
-                }
-                
-                if (ServerConstants.USE_NPCS_SCRIPTABLE) {
-                    c.announce(MaplePacketCreator.setNPCScriptable(ScriptableNPCConstants.SCRIPTABLE_NPCS));
                 }
             } finally {
                 c.releaseClient();

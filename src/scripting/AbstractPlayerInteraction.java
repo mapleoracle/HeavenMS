@@ -1009,37 +1009,24 @@ public class AbstractPlayerInteraction {
 		return (Pyramid) getPlayer().getPartyQuest();
 	}
 
-        public boolean createExpedition(MapleExpeditionType type) {
-                return createExpedition(type, false, 0, 0);
-        }
-        
-	public boolean createExpedition(MapleExpeditionType type, boolean silent, int minPlayers, int maxPlayers) {
-		MapleExpedition exped = new MapleExpedition(getPlayer(), type, silent, minPlayers, maxPlayers);
-		return getPlayer().getClient().getChannelServer().addExpedition(exped);
+	public void createExpedition(MapleExpeditionType type) {
+		MapleExpedition exped = new MapleExpedition(getPlayer(), type);
+		getPlayer().getClient().getChannelServer().getExpeditions().add(exped);
 	}
 
 	public void endExpedition(MapleExpedition exped) {
 		exped.dispose(true);
-		getPlayer().getClient().getChannelServer().removeExpedition(exped);
+		getPlayer().getClient().getChannelServer().getExpeditions().remove(exped);
 	}
 
 	public MapleExpedition getExpedition(MapleExpeditionType type) {
-                return getPlayer().getClient().getChannelServer().getExpedition(type);
+		for (MapleExpedition exped : getPlayer().getClient().getChannelServer().getExpeditions()) {
+			if (exped.getType().equals(type)) {
+				return exped;
+			}
+		}
+		return null;
 	}
-        
-        public String getExpeditionMemberNames(MapleExpeditionType type) {
-                String members = "";
-                MapleExpedition exped = getExpedition(type);
-                for (String memberName : exped.getMembers().values()) {
-                       members += "" + memberName + ", ";
-                }
-                return members;
-        }
-
-        public boolean isLeaderExpedition(MapleExpeditionType type) {
-                MapleExpedition exped = getExpedition(type);
-                return exped.isLeader(getPlayer());
-        }
         
         public long getJailTimeLeft() {
                 return getPlayer().getJailExpirationTimeLeft();

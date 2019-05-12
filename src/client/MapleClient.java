@@ -90,14 +90,12 @@ public class MapleClient {
 	public static final String CLIENT_KEY = "CLIENT";
         public static final String CLIENT_HWID = "HWID";
         public static final String CLIENT_NIBBLEHWID = "HWID2";
-        public static final String CLIENT_REMOTE_ADDRESS = "REMOTE_IP";
-        public static final String CLIENT_TRANSITION = "TRANSITION";
 	private MapleAESOFB send;
 	private MapleAESOFB receive;
 	private final IoSession session;
 	private MapleCharacter player;
 	private int channel = 1;
-	private int accId = -4;
+	private int accId = 0;
 	private boolean loggedIn = false;
 	private boolean serverTransition = false;
 	private Calendar birthday = null;
@@ -126,7 +124,7 @@ public class MapleClient {
         private int visibleWorlds;
 	private long lastNpcClick;
 	private long sessionId;
-        private int lang = 0;
+        private int lingua = 0;
         
         static {
             for (int i = 0; i < 200; i++) {
@@ -536,7 +534,7 @@ public class MapleClient {
                 if (loginattempt > 4) {
                         loggedIn = false;
 			MapleSessionCoordinator.getInstance().closeSession(session, false);
-                        return 6;   // thanks Survival_Project for finding out an issue with AUTOMATIC_REGISTER here
+                        return loginok;
 		}
 		
 		Connection con = null;
@@ -544,15 +542,16 @@ public class MapleClient {
 		ResultSet rs = null;
 		try {
 			con = DatabaseConnection.getConnection();
-			ps = con.prepareStatement("SELECT id, password, gender, banned, pin, pic, characterslots, tos, language FROM accounts WHERE name = ?");
+			ps = con.prepareStatement("SELECT id, password, gender, banned, pin, pic, characterslots, tos, lingua FROM accounts WHERE name = ?");
 			ps.setString(1, login);
 			rs = ps.executeQuery();
-                        accId = -2;
 			if (rs.next()) {
 				accId = rs.getInt("id");
-                                if (accId <= 0) {
-                                        FilePrinter.printError(FilePrinter.LOGIN_EXCEPTION, "Tried to login with accid " + accId);
+                                if (accId == 0) {
+                                        // odd case where accId is actually attributed as 0 (further on this leads to getLoginState ACCID = 0, an absurd), thanks Thora for finding this issue
                                         return 15;
+                                } else if (accId < 0) {
+                                        FilePrinter.printError(FilePrinter.LOGIN_EXCEPTION, "Tried to login with accid " + accId);
                                 }
                                 
                                 boolean banned = (rs.getByte("banned") == 1);
@@ -561,7 +560,7 @@ public class MapleClient {
 				pic = rs.getString("pic");
 				gender = rs.getByte("gender");
 				characterSlots = rs.getByte("characterslots");
-                                lang = rs.getInt("language");
+                                lingua = rs.getInt("lingua");
 				String passhash = rs.getString("password");
 				byte tos = rs.getByte("tos");
 
@@ -584,9 +583,7 @@ public class MapleClient {
 					loggedIn = false;
 					loginok = 4;
 				}
-			} else {
-                                accId = -3;
-                        }
+			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		} finally {
@@ -789,11 +786,24 @@ public class MapleClient {
                                 ps.setTimestamp(2, new java.sql.Timestamp(Server.getInstance().getCurrentTime()));
 				ps.setInt(3, getAccID());
 				ps.executeUpdate();
+                                
+                                
 			}
+                        /**
+                         * Log login to database - by DarkyDev
+                         * @TODO: Add IP Check
+                         */
+                        try (PreparedStatement ps = con.prepareStatement("INSERT INTO login_history (accountid,state) VALUES (?,?);")) {
+                            ps.setInt(1, getAccID());
+                            ps.setInt(2, newstate);
+                            ps.executeUpdate();
+                        }
                         con.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+                
+                 
                 
 		if (newstate == LOGIN_NOTLOGGEDIN) {
 			loggedIn = false;
@@ -825,10 +835,9 @@ public class MapleClient {
 			int state = rs.getInt("loggedin");
 			if (state == LOGIN_SERVER_TRANSITION) {
 				if (rs.getTimestamp("lastlogin").getTime() + 30000 < Server.getInstance().getCurrentTime()) {
-                                        int accountId = accId;
 					state = LOGIN_NOTLOGGEDIN;
-					updateLoginState(LOGIN_NOTLOGGEDIN);   // ACCID = 0, issue found thanks to Tochi & K u ssss o & Thora & Omo Oppa
-                                        this.setAccID(accountId);
+                                        MapleSessionCoordinator.getInstance().closeSession(session, null);
+					updateLoginState(LOGIN_NOTLOGGEDIN);
 				}
 			}
 			rs.close();
@@ -888,6 +897,7 @@ public class MapleClient {
                         player.cancelAllBuffs(true);
                         
                         player.closePlayerInteractions();
+                        QuestScriptManager.getInstance().dispose(this);
                         
                         if (!serverTransition) {    // thanks MedicOP for detecting an issue with party leader change on changing channels
                                 removePartyPlayer(wserv);
@@ -899,10 +909,6 @@ public class MapleClient {
                                 
                                 if (player.getMonsterCarnival() != null) {
                                         player.getMonsterCarnival().playerDisconnected(getPlayer().getId());
-                                }
-                                
-                                if (player.getAriantColiseum() != null) {
-                                        player.getAriantColiseum().playerDisconnected(getPlayer());
                                 }
                         }
                         
@@ -1033,9 +1039,6 @@ public class MapleClient {
                                 MapleSessionCoordinator.getInstance().closeSession(session, false);
                                 session.removeAttribute(MapleClient.CLIENT_KEY);
                         }
-                        if (!Server.getInstance().hasCharacteridInTransition(session)) {
-                                updateLoginState(MapleClient.LOGIN_NOTLOGGEDIN);
-                        }
                         
                         engines = null; // thanks Tochi for pointing out a NPE here
                 }
@@ -1078,21 +1081,7 @@ public class MapleClient {
 
         public boolean deleteCharacter(int cid, int senderAccId) {
                 try {
-                        MapleCharacter chr = MapleCharacter.loadCharFromDB(cid, this, false);
-                        
-                        Integer partyid = chr.getWorldServer().getCharacterPartyid(cid);
-                        if (partyid != null) {
-                                this.setPlayer(chr);
-                            
-                                MapleParty party = chr.getWorldServer().getParty(partyid);
-                                chr.setParty(party);
-                                chr.getMPC();
-                                chr.leaveParty();   // thanks Vcoc for pointing out deleted characters would still stay in a party
-                                
-                                this.setPlayer(null);
-                        }
-                        
-                        return MapleCharacter.deleteCharFromDB(chr, senderAccId);
+                        return MapleCharacter.deleteCharFromDB(MapleCharacter.loadCharFromDB(cid, this, false), senderAccId);
                 } catch(SQLException ex) {
                         ex.printStackTrace();
                         return false;
@@ -1462,8 +1451,18 @@ public class MapleClient {
 			return;
                 }
                 
-		player.closePlayerInteractions();
-                
+		if (player.getTrade() != null) {
+			MapleTrade.cancelTrade(getPlayer(), MapleTrade.TradeResult.PARTNER_CANCEL);
+		}
+
+		MapleHiredMerchant merchant = player.getHiredMerchant();
+		if (merchant != null) {
+			if (merchant.isOwner(getPlayer())) {
+				merchant.setOpen(true);
+			} else {
+				merchant.removeVisitor(getPlayer());
+			}
+		}
                 player.unregisterChairBuff();
 		server.getPlayerBuffStorage().addBuffsToStorage(player.getId(), player.getAllBuffs());
                 server.getPlayerBuffStorage().addDiseasesToStorage(player.getId(), player.getAllDiseases());
@@ -1483,10 +1482,8 @@ public class MapleClient {
 		player.getMap().removePlayer(player);
                 player.clearBanishPlayerData();
 		player.getClient().getChannelServer().removePlayer(player);
-		
-                player.getClient().updateLoginState(MapleClient.LOGIN_SERVER_TRANSITION);
-		player.setSessionTransitionState();
-                try {
+		player.getClient().updateLoginState(MapleClient.LOGIN_SERVER_TRANSITION);
+		try {
 			announce(MaplePacketCreator.getChannelChange(InetAddress.getByName(socket[0]), Integer.parseInt(socket[1])));
 		} catch (IOException e) {
                     e.printStackTrace();
@@ -1529,7 +1526,6 @@ public class MapleClient {
         public void closePlayerScriptInteractions() {
                 this.removeClickedNPC();
                 NPCScriptManager.getInstance().dispose(this);
-                QuestScriptManager.getInstance().dispose(this);
         }
         
         public boolean attemptCsCoupon() {
@@ -1562,11 +1558,11 @@ public class MapleClient {
                 return MapleLoginBypassCoordinator.getInstance().canLoginBypass(getNibbleHWID(), accId, true);
         }
         
-        public int getLanguage() {
-                return lang;
+        public int getLingua() {
+                return lingua;
         }
 
-        public void setLanguage(int lingua) {
-                this.lang = lingua;
+        public void setLingua(int lingua) {
+                this.lingua = lingua;
         }
 }

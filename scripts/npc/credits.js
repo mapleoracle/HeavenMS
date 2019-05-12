@@ -34,12 +34,14 @@ function writeServerStaff_MapleNext() {
 */
 
 function writeServerStaff_HeavenMS() {
+        addPerson("DarkyDev", "MapleOracle Owner & Developer");
         addPerson("Ronan", "Developer");
         addPerson("Vcoc", "Freelance Developer");
         addPerson("Thora", "Contributor");
         addPerson("GabrielSin", "Contributor");
         addPerson("Masterrulax", "Contributor");
         addPerson("MedicOP", "Adjunct Developer");
+        addPerson("DarkyDev", "MapleOracle Owner & Developer");
         
         setHistory(2015, 2018);
 }
@@ -90,8 +92,6 @@ function writeServerStaff_OdinMS() {
 }
 
 function writeServerStaff_Contributors() {
-        addPerson("Jayd", "Contributor");
-        addPerson("Dragohe4rt", "Contributor");
         addPerson("Jvlaple", "Contributor");
         addPerson("Stereo", "Contributor");
         addPerson("AngelSL", "Contributor");

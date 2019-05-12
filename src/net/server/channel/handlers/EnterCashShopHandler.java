@@ -42,6 +42,7 @@ public class EnterCashShopHandler extends AbstractMaplePacketHandler {
             if (mc.cannotEnterCashShop()) {
                 c.announce(MaplePacketCreator.enableActions());
                 return;
+                
             }
             
             if(mc.getEventInstance() != null) {

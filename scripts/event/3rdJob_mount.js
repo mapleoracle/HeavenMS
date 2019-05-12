@@ -92,7 +92,7 @@ function playerEntry(eim, player) {
 function playerUnregistered(eim, player) {}
 
 function playerExit(eim, player) {
-    var api = player.getAbstractPlayerInteraction();
+    var api = player.getClient().getAbstractPlayerInteraction();
     api.removeAll(4031507);
     api.removeAll(4031508);
     
